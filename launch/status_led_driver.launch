@@ -1,0 +1,6 @@
+<launch>
+  <node name="status_led_driver" pkg="rover_can_control_fork" type="status_led_driver.py" output="screen">
+    <param name="can_interface" type="string" value="can0" />
+  </node>
+
+</launch>

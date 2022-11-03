@@ -1,0 +1,7 @@
+<launch>
+    <group ns="/rover/control/manipulator">
+        <node name="can_motors_drive" pkg="rover_can_control_fork" type="manipulator_can_motors_drive.py" required="true" output="screen">
+            <rosparam command="load" file="$(find rover_can_control_fork)/config/manipulator_can_bus.yaml" />
+        </node>
+    </group>
+</launch>

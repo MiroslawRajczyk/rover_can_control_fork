@@ -1,0 +1,8 @@
+<launch>
+    <group ns="/rover/control/manipulator">
+        <node name="encoders_driver" pkg="rover_can_control_fork" type="manipulator_encoders_driver.py" required="true" output="screen">
+            <rosparam command="load" file="$(find rover_can_control_fork)/config/manipulator_can_bus.yaml" />
+            <rosparam command="load" file="$(find rover_can_control_fork)/config/encoders.yaml" />
+        </node>
+    </group>
+</launch>

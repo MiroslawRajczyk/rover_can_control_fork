@@ -1,0 +1,3 @@
+<launch>
+    <node name="test_can_board_driver" pkg="rover_can_control_fork" type="test_can_board_driver" output="screen"></node>
+</launch>

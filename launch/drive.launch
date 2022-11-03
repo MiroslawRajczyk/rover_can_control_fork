@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="rover_can_control_fork" type="drive.py" name="drive" output="screen" respawn="true">
+        <param name="can_interface" type="string" value="can0" />
+        <param name="micontrol_eds" type="string" value="$(find rover_can_control_fork)/config/mcDSA-Exx.eds" />
+        <param name="speed_const" type="int" value="201" />
+    </node>
+</launch>
