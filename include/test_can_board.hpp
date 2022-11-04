@@ -1,7 +1,14 @@
 #pragma once
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 
 #include <linux/can.h>
-#include <libsocketcan.h>
+#include <linux/can/raw.h>
 #include <atomic>
 #include <thread>
 #include <iostream>
@@ -10,42 +17,72 @@
 unsigned int positionToEncoderReadings(double position);
 
 struct PID {
-    std::atomic<double> p;
-    std::atomic<double> i;
-    std::atomic<double> d;
+    float p;
+    float i;
+    float d;
 };
 
 struct EffortLimits {
-    std::atomic<char> min;
-    std::atomic<char> max;
+    int min;
+    int max;
 };
 
 struct PositionLimits {
-    std::atomic<double> from;
-    std::atomic<double> to;
+    float from;
+    float to;
 };
 
 class CanBoard {
     private:
-        //std::atomic<int> can_socket;
-        //std::atomic<unsigned int> can_id{0};
-        //std::atomic<unsigned int> board_type;
-        ////std::atomic<double> encoder_offset{0.0);
-        //std::atomic<char> set_effort;
-        //std::atomic<char> measured_effort;
-        ////std::atomic<double> set_position{0.0};
-        //std::atomic<double> measured_position{0.0};
-        //std::atomic<double> set_velocity{0.0};
-        //std::atomic<double> measured_velocity{0.0};
-        //std::atomic<double> encoder_frames_sending_frequency{0.0};
-        //PID velocity_PID;
-        //PID position_PID;
-        //EffortLimits effort_limits;
-        //PositionLimits position_limits;
-        void sendFrameRequest(unsigned char requested_frame_ID);
-    public:
         int can_id;
+        int boardType;
+        bool isEnabled;
+        float velocityGoal;
+        float velocityReal;
+        float positionGoal;
+        float positionReal;
+        int effortGoal;
+        int effortReal;
+        float encoderOffset;
+        float encoderReadingsFrequency;
+        PID velocityPID;
+        PID positionPID;
+        EffortLimits effortLimits;
+        PositionLimits positionLimits;
+        //std::atomic<int> can_socket;
+        //void sendFrameRequest(unsigned char requested_frame_ID);
+    public:
         CanBoard(int id);
-        void worker();
-
+        void workerCanSender();
+        void workerCanReceiver();
+        int getCanId() { return can_id; };
+        void setCanId(int id) { can_id = id; };
+        int getBoardType() { return boardType; };
+        void setBoardType(int type) { boardType = type; };
+        bool getIsEnabled() { return isEnabled; };
+        void setIsEnabled(bool state) { isEnabled = state; };
+        float getVelocityGoal() { return velocityGoal; };
+        void setVelocityGoal(float velocity) { velocityGoal = velocity; };
+        float getVelocityReal() { return velocityReal; };
+        void setVelocityReal(float velocity) { velocityReal = velocity; };
+        float getPositionGoal() { return positionGoal; };
+        void setPositionGoal(float position) { positionGoal = position; };
+        float getPositionReal() { return positionReal; };
+        void setPositionReal(float position) { positionReal = position; };
+        int getEffortGoal() { return effortGoal; };
+        void setEffortGoal(int effort) { effortGoal = effort; };
+        int getEffortReal() { return effortReal; };
+        void setEffortReal(int effort) { effortReal = effort; };
+        float getEncoderOffset() { return encoderOffset; };
+        void setEncoderOffset(float offset) { encoderOffset = offset; };
+        float getEncoderReadingsFrequency() { return encoderReadingsFrequency; };
+        void setEncoderReadingsFrequency(float frequency) { encoderReadingsFrequency = frequency; };
+        const PID & getVelocityPID() const { return velocityPID; }
+        void setVelocityPID(float p, float i, float d) { velocityPID.p = p; velocityPID.i = i; velocityPID.d = d; };
+        const PID & getPositionPID() const { return positionPID; }
+        void setPositionPID(float p, float i, float d) { positionPID.p = p; positionPID.i = i; positionPID.d = d; };
+        const EffortLimits & getEffortLimits() const { return effortLimits; }
+        void setEffortLimits(int min, int max) { effortLimits.min = min; effortLimits.max = max; };
+        const PositionLimits & getPositionLimits() const { return positionLimits; }
+        void setPositionLimits(int from, int to) { positionLimits.from = from; positionLimits.to = to; };
 };

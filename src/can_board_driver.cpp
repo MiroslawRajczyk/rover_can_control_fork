@@ -10,7 +10,8 @@ int main(int argc, char **argv) {
 
     //std::unique_ptr<CanBoards> can_boards(new int(15));
 
-    CanBoards can_boards(node_handle);
+    CanBoards boards(node_handle);
+    boards.setCanBoardCanId(0,33);
     //ManipulatorInterface manipulator_interface(node_handle, can_boards);
 
     ros::spin();
