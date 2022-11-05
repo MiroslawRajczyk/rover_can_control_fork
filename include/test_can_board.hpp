@@ -55,7 +55,6 @@ class CanBoard {
     public:
         CanBoard(int id);
         void workerCanSender();
-        void workerCanReceiver();
         can_frame getEffortFrame();
         can_frame getPositionFrame();
         can_frame getVelocityFrame();

@@ -30,6 +30,7 @@ class CanBoards {
     void velocityGoalSubscriberCallback(const tools::CbVelocityArray::ConstPtr& msg);
     void positionGoalSubscriberCallback(const tools::CbPositionArray::ConstPtr& msg);
     void effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPtr& msg);
+    void workerCanReceiver();
 
     void readEncodersOffsetsFromFile(std::string path);
 };

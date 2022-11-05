@@ -5,6 +5,9 @@ CanBoard::CanBoard(int id)
     can_id = id;
     isEnabled = true;
     frameType = 0;
+    velocityReal = 0;
+    effortReal = 0;
+    positionReal = 0;
 }
 
 unsigned int positionToEncoderReadings(double position) {
@@ -55,63 +58,6 @@ void CanBoard::workerCanSender()
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }  
-    }
-    if (close(s) < 0) {
-        perror("Close");
-    }
-}
-
-void CanBoard::workerCanReceiver() {
-    int s, i;
-    int nbytes;
-    struct sockaddr_can addr;
-    struct ifreq ifr;
-    struct can_frame frame;
-    struct can_filter rfilter[6];
-
-	rfilter[0].can_id   = 0x0A;
-	rfilter[0].can_mask = 0xFFF;
-    rfilter[1].can_id   = 0x0B;
-	rfilter[1].can_mask = 0xFFF;
-    rfilter[2].can_id   = 0x0C;
-	rfilter[2].can_mask = 0xFFF;
-    rfilter[3].can_id   = 0x0D;
-	rfilter[3].can_mask = 0xFFF;
-    rfilter[4].can_id   = 0x0E;
-	rfilter[4].can_mask = 0xFFF;
-    rfilter[5].can_id   = 0x0F;
-	rfilter[5].can_mask = 0xFFF;
-
-    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
-    ioctl(s, SIOCGIFINDEX, &ifr);
-    memset(&addr, 0, sizeof(addr));
-    addr.can_family = AF_CAN;
-    addr.can_ifindex = ifr.ifr_ifindex;
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        perror("Bind");
-        exit(1);
-    }
-
-    while (isEnabled)
-    {
-        if (s < 0)
-        {
-            std::cout << "Can socket error!" << std::endl;
-        }
-        else
-        {
-            setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
-            nbytes = read(s, &frame, sizeof(struct can_frame));
-            if (nbytes < 0) {
-                perror("Read");
-            }
-            printf("0x%03X [%d] ",frame.can_id, frame.can_dlc);
-            for (i = 0; i < frame.can_dlc; i++)
-                printf("%02X ",frame.data[i]);
-            printf("\r\n");
-        }
     }
     if (close(s) < 0) {
         perror("Close");

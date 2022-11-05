@@ -16,7 +16,7 @@ CanBoards::CanBoards() {
         //th.push_back(std::thread(&CanBoard::workerCanReceiver, &can_boards[i]));
         //std::cout <<"Created workerCanRrecever thread"<<std::endl;
     }
-    th.push_back(std::thread(&CanBoard::workerCanReceiver, &can_boards[0]));
+    th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
 
     ros::NodeHandle node_handler("can_board_driver");
     velocityGoalSubscriber = node_handler.subscribe("velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
@@ -85,5 +85,118 @@ void CanBoards::readEncodersOffsetsFromFile(std::string path) {
     while(getline(fin,line)){
         can_boards.at(i).setEncoderOffset(std::stof(line));
         i++;
+    }
+}
+
+
+void CanBoards::workerCanReceiver() {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    struct can_filter rfilter[6];
+
+	rfilter[0].can_id   = 0x0A;
+	rfilter[0].can_mask = 0xFFF;
+    rfilter[1].can_id   = 0x0B;
+	rfilter[1].can_mask = 0xFFF;
+    rfilter[2].can_id   = 0x0C;
+	rfilter[2].can_mask = 0xFFF;
+    rfilter[3].can_id   = 0x0D;
+	rfilter[3].can_mask = 0xFFF;
+    rfilter[4].can_id   = 0x0E;
+	rfilter[4].can_mask = 0xFFF;
+    rfilter[5].can_id   = 0x0F;
+	rfilter[5].can_mask = 0xFFF;
+
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+
+    while (true)
+    {
+        if (s < 0)
+        {
+            std::cout << "Can socket error!" << std::endl;
+        }
+        else
+        {
+            setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
+            nbytes = read(s, &frame, sizeof(struct can_frame));
+            if (nbytes < 0) {
+                perror("Read");
+            }
+            // read can message with position, velocity and effort values from encoder-----
+            if (frame.data[0] == 0x13) {
+                switch(frame.can_id) {
+                    case 0x0A:
+                        can_boards.at(0).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(0).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                        can_boards.at(0).setEffortReal(frame.data[5]);
+                        if(can_boards.at(0).getEffortReal() > 150) {
+                            can_boards.at(0).setEffortReal(can_boards.at(0).getEffortReal() - 256);
+                        }
+                        break;
+                    case 0x0B:
+                        can_boards.at(1).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(1).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                        can_boards.at(1).setEffortReal(frame.data[5]);
+                        if(can_boards.at(1).getEffortReal() > 150) {
+                            can_boards.at(1).setEffortReal(can_boards.at(1).getEffortReal() - 256);
+                        }
+                        break;
+                    case 0x0C:
+                        can_boards.at(2).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(2).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                        can_boards.at(2).setEffortReal(frame.data[5]);
+                        if(can_boards.at(2).getEffortReal() > 150) {
+                            can_boards.at(2).setEffortReal(can_boards.at(2).getEffortReal() - 256);
+                        }
+                        break;
+                    case 0x0D:
+                        can_boards.at(3).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(3).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                        can_boards.at(3).setEffortReal(frame.data[5]);
+                        if(can_boards.at(3).getEffortReal() > 150) {
+                            can_boards.at(3).setEffortReal(can_boards.at(3).getEffortReal() - 256);
+                        }
+                        break;
+                    case 0x0E:
+                        can_boards.at(4).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(4).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                        can_boards.at(4).setEffortReal(frame.data[5]);
+                        if(can_boards.at(4).getEffortReal() > 150) {
+                            can_boards.at(4).setEffortReal(can_boards.at(4).getEffortReal() - 256);
+                        }
+                        break;
+                    case 0x0F:
+                        can_boards.at(5).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(5).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                        can_boards.at(5).setEffortReal(frame.data[5]);
+                        if(can_boards.at(5).getEffortReal() > 150) {
+                            can_boards.at(5).setEffortReal(can_boards.at(5).getEffortReal() - 256);
+                        }
+                        break;
+                    
+                }
+            }
+            // ---------------------------------------------------------------------------
+            printf("0x%03X [%d] ",frame.can_id, frame.can_dlc);
+            for (i = 0; i < frame.can_dlc; i++)
+                printf("%02X ",frame.data[i]);
+            printf("\r\n");
+        }
+    }
+    if (close(s) < 0) {
+        perror("Close");
     }
 }
