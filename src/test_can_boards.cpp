@@ -13,9 +13,10 @@ CanBoards::CanBoards() {
     for(int i=0; i < can_boards.size(); i++){
         th.push_back(std::thread(&CanBoard::workerCanSender, &can_boards[i]));
         std::cout <<"Created workerCanSender thread"<<std::endl;
-        th.push_back(std::thread(&CanBoard::workerCanReceiver, &can_boards[i]));
-        std::cout <<"Created workerCanRrecever thread"<<std::endl;
+        //th.push_back(std::thread(&CanBoard::workerCanReceiver, &can_boards[i]));
+        //std::cout <<"Created workerCanRrecever thread"<<std::endl;
     }
+    th.push_back(std::thread(&CanBoard::workerCanReceiver, &can_boards[0]));
 
     ros::NodeHandle node_handler("can_board_driver");
     velocityGoalSubscriber = node_handler.subscribe("velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
@@ -44,6 +45,7 @@ void CanBoards::velocityGoalSubscriberCallback(const tools::CbVelocityArray::Con
     if(msg->velocity.size() == 6) {
         for (int i =0; i< msg->velocity.size();i++) {
             can_boards.at(i).setVelocityGoal(msg->velocity[i]);
+            can_boards.at(i).setFrameType(12);
         }
     } else {
         ROS_INFO("Setting velocities of Can Boards require 6 values to be sent, received: %d", msg->velocity.size());
@@ -55,6 +57,8 @@ void CanBoards::positionGoalSubscriberCallback(const tools::CbPositionArray::Con
     if(msg->position.size() == 6) {
         for (int i =0; i< msg->position.size();i++) {
             can_boards.at(i).setPositionGoal(msg->position[i]);
+            can_boards.at(i).setFrameType(11);
+
         }
     } else {
         ROS_INFO("Setting position of Can Boards require 6 values to be sent, received: %d", msg->position.size());
@@ -66,6 +70,7 @@ void CanBoards::effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPt
     if(msg->effort.size() == 6) {
         for (int i =0; i< msg->effort.size();i++) {
             can_boards.at(i).setEffortGoal(msg->effort[i]);
+            can_boards.at(i).setFrameType(10);
         }
     } else {
         ROS_INFO("Setting effort of Can Boards require 6 values to be sent, received: %d", msg->effort.size());

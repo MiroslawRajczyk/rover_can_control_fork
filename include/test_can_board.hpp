@@ -37,6 +37,7 @@ class CanBoard {
         int can_id;
         int boardType;
         bool isEnabled;
+        int frameType;
         float velocityGoal;
         float velocityReal;
         float positionGoal;
@@ -55,12 +56,19 @@ class CanBoard {
         CanBoard(int id);
         void workerCanSender();
         void workerCanReceiver();
+        can_frame getEffortFrame();
+        can_frame getPositionFrame();
+        can_frame getVelocityFrame();
+
+        // getters & setters
         int getCanId() { return can_id; };
         void setCanId(int id) { can_id = id; };
         int getBoardType() { return boardType; };
         void setBoardType(int type) { boardType = type; };
         bool getIsEnabled() { return isEnabled; };
         void setIsEnabled(bool state) { isEnabled = state; };
+        int getFrameType() { return frameType; };
+        void setFrameType(int type) { frameType = type; };
         float getVelocityGoal() { return velocityGoal; };
         void setVelocityGoal(float velocity) { velocityGoal = velocity; };
         float getVelocityReal() { return velocityReal; };
@@ -85,4 +93,6 @@ class CanBoard {
         void setEffortLimits(int min, int max) { effortLimits.min = min; effortLimits.max = max; };
         const PositionLimits & getPositionLimits() const { return positionLimits; }
         void setPositionLimits(int from, int to) { positionLimits.from = from; positionLimits.to = to; };
+
+
 };
