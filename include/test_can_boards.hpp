@@ -4,7 +4,7 @@
 #include "tools/CbVelocityArray.h"
 #include "tools/CbEffortArray.h"
 #include "tools/CbPositionArray.h"
-
+#include "tools/PoseController.h"
 
 #include "std_msgs/String.h"
 
@@ -31,6 +31,7 @@ class CanBoards {
     void positionGoalSubscriberCallback(const tools::CbPositionArray::ConstPtr& msg);
     void effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPtr& msg);
     void workerCanReceiver();
+    void workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub);
 
     void readEncodersOffsetsFromFile(std::string path);
 };

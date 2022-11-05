@@ -17,11 +17,17 @@ CanBoards::CanBoards() {
         //std::cout <<"Created workerCanRrecever thread"<<std::endl;
     }
     th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
+    
 
     ros::NodeHandle node_handler("can_board_driver");
     velocityGoalSubscriber = node_handler.subscribe("velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
     positionGoalSubscriber = node_handler.subscribe("position_goal", 1, &CanBoards::positionGoalSubscriberCallback, this);
     effortGoalSubscriber = node_handler.subscribe("effort_goal", 1, &CanBoards::effortGoalSubscriberCallback, this);
+    ros::Publisher positionPublisher = node_handler.advertise<tools::PoseController>("position_real", 1);
+    ros::Publisher velocityPublisher = node_handler.advertise<tools::CbVelocityArray>("velocity_real", 1);
+    ros::Publisher effortPublisher = node_handler.advertise<tools::CbEffortArray>("effort_real", 1);
+
+    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher));
 }
 
 CanBoards::~CanBoards() {
@@ -88,7 +94,6 @@ void CanBoards::readEncodersOffsetsFromFile(std::string path) {
     }
 }
 
-
 void CanBoards::workerCanReceiver() {
     int s, i;
     int nbytes;
@@ -139,51 +144,51 @@ void CanBoards::workerCanReceiver() {
             if (frame.data[0] == 0x13) {
                 switch(frame.can_id) {
                     case 0x0A:
-                        can_boards.at(0).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(0).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                         can_boards.at(0).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                         can_boards.at(0).setEffortReal(frame.data[5]);
-                        if(can_boards.at(0).getEffortReal() > 150) {
-                            can_boards.at(0).setEffortReal(can_boards.at(0).getEffortReal() - 256);
+                        if(can_boards.at(0).getEffortReal() > 150.0) {
+                            can_boards.at(0).setEffortReal(can_boards.at(0).getEffortReal() - 256.0);
                         }
                         break;
                     case 0x0B:
-                        can_boards.at(1).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(1).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                         can_boards.at(1).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                         can_boards.at(1).setEffortReal(frame.data[5]);
-                        if(can_boards.at(1).getEffortReal() > 150) {
-                            can_boards.at(1).setEffortReal(can_boards.at(1).getEffortReal() - 256);
+                        if(can_boards.at(1).getEffortReal() > 150.0) {
+                            can_boards.at(1).setEffortReal(can_boards.at(1).getEffortReal() - 256.0);
                         }
                         break;
                     case 0x0C:
-                        can_boards.at(2).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(2).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                         can_boards.at(2).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                         can_boards.at(2).setEffortReal(frame.data[5]);
-                        if(can_boards.at(2).getEffortReal() > 150) {
-                            can_boards.at(2).setEffortReal(can_boards.at(2).getEffortReal() - 256);
+                        if(can_boards.at(2).getEffortReal() > 150.0) {
+                            can_boards.at(2).setEffortReal(can_boards.at(2).getEffortReal() - 256.0);
                         }
                         break;
                     case 0x0D:
-                        can_boards.at(3).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(3).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                         can_boards.at(3).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                         can_boards.at(3).setEffortReal(frame.data[5]);
-                        if(can_boards.at(3).getEffortReal() > 150) {
-                            can_boards.at(3).setEffortReal(can_boards.at(3).getEffortReal() - 256);
+                        if(can_boards.at(3).getEffortReal() > 150.0) {
+                            can_boards.at(3).setEffortReal(can_boards.at(3).getEffortReal() - 256.0);
                         }
                         break;
                     case 0x0E:
-                        can_boards.at(4).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(4).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                         can_boards.at(4).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                         can_boards.at(4).setEffortReal(frame.data[5]);
-                        if(can_boards.at(4).getEffortReal() > 150) {
-                            can_boards.at(4).setEffortReal(can_boards.at(4).getEffortReal() - 256);
+                        if(can_boards.at(4).getEffortReal() > 150.0) {
+                            can_boards.at(4).setEffortReal(can_boards.at(4).getEffortReal() - 256.0);
                         }
                         break;
                     case 0x0F:
-                        can_boards.at(5).setPositionReal(((frame.data[1] << 8) | frame.data[2])*360.0/4096.0);
+                        can_boards.at(5).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                         can_boards.at(5).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                         can_boards.at(5).setEffortReal(frame.data[5]);
-                        if(can_boards.at(5).getEffortReal() > 150) {
-                            can_boards.at(5).setEffortReal(can_boards.at(5).getEffortReal() - 256);
+                        if(can_boards.at(5).getEffortReal() > 150.0) {
+                            can_boards.at(5).setEffortReal(can_boards.at(5).getEffortReal() - 256.0);
                         }
                         break;
                     
@@ -198,5 +203,25 @@ void CanBoards::workerCanReceiver() {
     }
     if (close(s) < 0) {
         perror("Close");
+    }
+}
+
+void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub) {
+    ros::Rate loop_rate(10);
+    while (ros::ok()) {
+        tools::PoseController poseMsg;
+        poseMsg.position = {can_boards.at(0).getPositionReal(),can_boards.at(1).getPositionReal(),can_boards.at(2).getPositionReal(),can_boards.at(3).getPositionReal(),can_boards.at(4).getPositionReal(),can_boards.at(5).getPositionReal()};
+        positionPub.publish(poseMsg);
+
+        tools::CbVelocityArray velMsg;
+        velMsg.velocity = {can_boards.at(0).getVelocityReal(),can_boards.at(1).getVelocityReal(),can_boards.at(2).getVelocityReal(),can_boards.at(3).getVelocityReal(),can_boards.at(4).getVelocityReal(),can_boards.at(5).getVelocityReal()};
+        velocityPub.publish(velMsg);
+
+        tools::CbEffortArray effMsg;
+        effMsg.effort = {can_boards.at(0).getEffortReal(),can_boards.at(1).getEffortReal(),can_boards.at(2).getEffortReal(),can_boards.at(3).getEffortReal(),can_boards.at(4).getEffortReal(),can_boards.at(5).getEffortReal()};
+        effortPub.publish(effMsg);
+
+        ros::spinOnce();
+        loop_rate.sleep();
     }
 }
