@@ -5,6 +5,7 @@
 #include "tools/CbEffortArray.h"
 #include "tools/CbPositionArray.h"
 #include "tools/PoseController.h"
+#include "tools/encoder_set_offset.h"
 
 #include "std_msgs/String.h"
 
@@ -21,6 +22,7 @@ class CanBoards {
         std::vector<CanBoard> can_boards;
         std::vector<std::thread> th;
         ros::Subscriber velocityGoalSubscriber, positionGoalSubscriber, effortGoalSubscriber;
+        ros::ServiceServer setEncoderOffsetService;
     public:
     CanBoards();
     ~CanBoards();
@@ -34,4 +36,6 @@ class CanBoards {
     void workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub);
 
     void readEncodersOffsetsFromFile(std::string path);
+    bool setEncoderOffsetCallback(tools::encoder_set_offset::Request  &req, tools::encoder_set_offset::Response &res);
+
 };
