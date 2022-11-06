@@ -51,8 +51,13 @@ void CanBoards::disableCanBoardsThreads() {
 void CanBoards::velocityGoalSubscriberCallback(const tools::CbVelocityArray::ConstPtr& msg) {
     if(msg->velocity.size() == 6) {
         for (int i =0; i< msg->velocity.size();i++) {
-            can_boards.at(i).setVelocityGoal(msg->velocity[i]);
-            can_boards.at(i).setFrameType(12);
+            if ((msg->velocity[i] <= 32.5) && (msg->velocity[i] >= -32.5)) {
+                can_boards.at(i).setVelocityGoal(msg->velocity[i]);
+                can_boards.at(i).setFrameType(12);
+            } else {
+                ROS_INFO("Received wrong value! Values in velocity_goal array need to in range from <-32.5 to 32.5>. Setting velocity to 0 for safety...");
+                can_boards.at(i).setVelocityGoal(0);
+            }
         }
     } else {
         ROS_INFO("Setting velocities of Can Boards require 6 values to be sent, received: %d", msg->velocity.size());
@@ -63,9 +68,13 @@ void CanBoards::velocityGoalSubscriberCallback(const tools::CbVelocityArray::Con
 void CanBoards::positionGoalSubscriberCallback(const tools::CbPositionArray::ConstPtr& msg) {
     if(msg->position.size() == 6) {
         for (int i = 0; i < msg->position.size();i++) {
-            can_boards.at(i).setPositionGoal(msg->position[i]);
-            can_boards.at(i).setFrameType(11);
-
+            if ((msg->position[i] <= 180.0) && (msg->position[i] > -180.0)) {
+                can_boards.at(i).setPositionGoal(msg->position[i]);
+                can_boards.at(i).setFrameType(11);
+            } else {
+                ROS_INFO("Received wrong value! Values in position_goal array need to in range from (-180 to 180>. Setting position_goal to position_real for safety...");
+                can_boards.at(i).setPositionGoal(can_boards.at(i).getPositionReal());
+            }
         }
     } else {
         ROS_INFO("Setting position of Can Boards require 6 values to be sent, received: %d", msg->position.size());
@@ -76,8 +85,13 @@ void CanBoards::positionGoalSubscriberCallback(const tools::CbPositionArray::Con
 void CanBoards::effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPtr& msg) {
     if(msg->effort.size() == 6) {
         for (int i =0; i< msg->effort.size();i++) {
-            can_boards.at(i).setEffortGoal(msg->effort[i]);
-            can_boards.at(i).setFrameType(10);
+            if ((msg->effort[i] <= 100) && (msg->effort[i] >= -100)) {
+                can_boards.at(i).setEffortGoal(msg->effort[i]);
+                can_boards.at(i).setFrameType(10);
+            } else {
+                ROS_INFO("Received wrong value! Values in effort_goal array need to in range from <-100 to 100>. Setting effort to 0 for safety...");
+                can_boards.at(i).setEffortGoal(0);
+            }
         }
     } else {
         ROS_INFO("Setting effort of Can Boards require 6 values to be sent, received: %d", msg->effort.size());
@@ -197,17 +211,13 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
 bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &req, tools::encoder_set_offset::Response &res) {
     can_boards[req.id].setEncoderOffset(req.new_value);
     if (can_boards[req.id].getEncoderOffset() == req.new_value) {
-
         std::fstream file;
         file.open("/home/miroslaw/manipulator_encoders_offsets.txt",std::ios_base::out);
-
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
         }
-
         file.close();
-
         res.success = true;
         return true;
     }
