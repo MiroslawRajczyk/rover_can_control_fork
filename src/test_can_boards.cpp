@@ -8,7 +8,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(14));
     can_boards.push_back(CanBoard(15));
     
-    this->readEncodersOffsetsFromFile("/home/nvidia/manipulator_encoders_offsets.txt");
+    this->readEncodersOffsetsFromFile("/home/miroslaw/manipulator_encoders_offsets.txt");
 
     for(int i=0; i < can_boards.size(); i++){
         th.push_back(std::thread(&CanBoard::workerCanSender, &can_boards[i]));
@@ -86,11 +86,11 @@ void CanBoards::effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPt
 }
 
 void CanBoards::readEncodersOffsetsFromFile(std::string path) {
-    std::string line;    
+    std::string line;
     std::ifstream fin(path);
     int i = 0;
     while(getline(fin,line)){
-        can_boards.at(i).setEncoderOffset(std::stof(line));
+        can_boards[i].setEncoderOffset(std::stof(line));
         i++;
     }
 }
@@ -153,10 +153,14 @@ void CanBoards::workerCanReceiver() {
                 }
                 can_boards.at(id).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                 can_boards.at(id).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
+                if(can_boards.at(id).getVelocityReal() > 32.767) {
+                    can_boards.at(id).setVelocityReal(can_boards.at(id).getVelocityReal() - 65.536);
+                }
                 can_boards.at(id).setEffortReal(frame.data[5]);
                 if(can_boards.at(id).getEffortReal() > 150.0) {
                     can_boards.at(id).setEffortReal(can_boards.at(id).getEffortReal() - 256.0);
                 }
+                std::cout<<"Current Position: "<<can_boards.at(id).getPositionReal()<<" , velocity: "<<can_boards.at(id).getVelocityReal()<<" effort: "<<can_boards.at(id).getEffortReal()<<std::endl;
             }
             // ---------------------------------------------------------------------------
             printf("0x%03X [%d] ",frame.can_id, frame.can_dlc);
@@ -174,7 +178,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
     ros::Rate loop_rate(10);
     while (ros::ok()) {
         tools::PoseController poseMsg;
-        poseMsg.position = {can_boards.at(0).getPositionReal(),can_boards.at(1).getPositionReal(),can_boards.at(2).getPositionReal(),can_boards.at(3).getPositionReal(),can_boards.at(4).getPositionReal(),can_boards.at(5).getPositionReal()};
+        poseMsg.position = {can_boards.at(0).getPositionReal() + can_boards.at(0).getEncoderOffset(),can_boards.at(1).getPositionReal() + can_boards.at(1).getEncoderOffset(),can_boards.at(2).getPositionReal() + can_boards.at(2).getEncoderOffset(),can_boards.at(3).getPositionReal() + can_boards.at(3).getEncoderOffset(),can_boards.at(4).getPositionReal() + can_boards.at(4).getEncoderOffset() ,can_boards.at(5).getPositionReal() + can_boards.at(5).getEncoderOffset()};
         positionPub.publish(poseMsg);
 
         tools::CbVelocityArray velMsg;
@@ -191,17 +195,17 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
 }
 
 bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &req, tools::encoder_set_offset::Response &res) {
-    can_boards.at(req.id).setEncoderOffset(req.new_value);
-    if (can_boards.at(req.id).getEncoderOffset() == req.new_value) {
+    can_boards[req.id].setEncoderOffset(req.new_value);
+    if (can_boards[req.id].getEncoderOffset() == req.new_value) {
 
         std::fstream file;
-        file.open("/home/nvidia/manipulator_encoders_offsets.txt",std::ios_base::out);
-    
+        file.open("/home/miroslaw/manipulator_encoders_offsets.txt",std::ios_base::out);
+
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
         }
-    
+
         file.close();
 
         res.success = true;

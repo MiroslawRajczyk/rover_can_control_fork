@@ -11,16 +11,16 @@ CanBoard::CanBoard(int id)
 }
 
 unsigned int positionToEncoderReadings(double position) {
-    if (position > 180) {
-        position = position - 360;
-    } else if (position < -180) {
-        position = position + 360;
+    if (position > 180.0) {
+        position = position - 360.0;
+    } else if (position < -180.0) {
+        position = position + 360.0;
     }
-    int tmp_position = (position*4096)/360;
-    while(tmp_position < 0)
-        tmp_position += 4096;
-    while(tmp_position >= 4096)
-        tmp_position -= 4096;
+    int tmp_position = (position*4096.0)/360.0;
+    while(tmp_position < 0.0)
+        tmp_position += 4096.0;
+    while(tmp_position >= 4096.0)
+        tmp_position -= 4096.0;
     return tmp_position;
 }
 
@@ -57,7 +57,7 @@ void CanBoard::workerCanSender()
                 perror("Write");
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }  
+        }
     }
     if (close(s) < 0) {
         perror("Close");
@@ -75,11 +75,12 @@ can_frame CanBoard::getEffortFrame() {
     return frame;
 }
 
-can_frame CanBoard::getPositionFrame() { 
+can_frame CanBoard::getPositionFrame() {
      if(getPositionGoal() < -180 || getPositionGoal() > 180)
         throw "Invalid position value! Outside of range <-180, 180>";
     struct can_frame frame;
-    unsigned int tmp_position = positionToEncoderReadings(getPositionGoal() + getEncoderOffset());
+    //unsigned int tmp_position = positionToEncoderReadings(getPositionGoal() + getEncoderOffset() - 180.0); -- konsultacja z Tomkiem - próbujemy wyjebać offset
+    unsigned int tmp_position = positionToEncoderReadings(getPositionGoal() - getEncoderOffset() - 180.0);
     frame.can_id = can_id;
     frame.can_dlc = 3; // Number of bytes of data to send
     frame.data[0] = 0x11; // Function type
