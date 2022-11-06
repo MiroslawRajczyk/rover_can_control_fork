@@ -54,7 +54,7 @@ void CanBoard::workerCanSender()
             }
 
             if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
-                perror("Write");
+                //perror("Write");
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

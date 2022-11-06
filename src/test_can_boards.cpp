@@ -8,7 +8,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(14));
     can_boards.push_back(CanBoard(15));
     
-    this->readEncodersOffsetsFromFile("/home/miroslaw/manipulator_encoders_offsets.txt");
+    this->readEncodersOffsetsFromFile("/home/nvidia/manipulator_encoders_offsets.txt");
 
     for(int i=0; i < can_boards.size(); i++){
         th.push_back(std::thread(&CanBoard::workerCanSender, &can_boards[i]));
@@ -27,6 +27,8 @@ CanBoards::CanBoards() {
     ros::Publisher velocityPublisher = node_handler.advertise<tools::CbVelocityArray>("velocity_real", 1);
     ros::Publisher effortPublisher = node_handler.advertise<tools::CbEffortArray>("effort_real", 1);
     setEncoderOffsetService = node_handler.advertiseService("set_encoder_offset", &CanBoards::setEncoderOffsetCallback, this);
+    setEncoderPositionPidService = node_handler.advertiseService("set_encoder_position_pid", &CanBoards::setEncoderPositionPidCallback, this);
+    setEncoderVelocityPidService = node_handler.advertiseService("set_encoder_velocity_pid", &CanBoards::setEncoderVelocityPidCallback, this);
 
     th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher));
 }
@@ -155,16 +157,16 @@ void CanBoards::workerCanReceiver() {
             if (nbytes < 0) {
                 perror("Read");
             }
-            // read can message with position, velocity and effort values from encoder-----
+            switch(frame.can_id) {
+                case 0x0A: id = 0; break;
+                case 0x0B: id = 1; break;
+                case 0x0C: id = 2; break;
+                case 0x0D: id = 3; break;
+                case 0x0E: id = 4; break;
+                case 0x0F: id = 5; break;
+            }
+            // read can message with position, velocity and effort values from encoder----
             if (frame.data[0] == 0x13) {
-                switch(frame.can_id) {
-                    case 0x0A: id = 0; break;
-                    case 0x0B: id = 1; break;
-                    case 0x0C: id = 2; break;
-                    case 0x0D: id = 3; break;
-                    case 0x0E: id = 4; break;
-                    case 0x0F: id = 5; break;
-                }
                 can_boards.at(id).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
                 can_boards.at(id).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                 if(can_boards.at(id).getVelocityReal() > 32.767) {
@@ -177,10 +179,22 @@ void CanBoards::workerCanReceiver() {
                 std::cout<<"Current Position: "<<can_boards.at(id).getPositionReal()<<" , velocity: "<<can_boards.at(id).getVelocityReal()<<" effort: "<<can_boards.at(id).getEffortReal()<<std::endl;
             }
             // ---------------------------------------------------------------------------
-            printf("0x%03X [%d] ",frame.can_id, frame.can_dlc);
-            for (i = 0; i < frame.can_dlc; i++)
-                printf("%02X ",frame.data[i]);
-            printf("\r\n");
+            // read can message with position PID from encoder ---------------------------
+            if (frame.data[0] == 0x18) {
+                can_boards.at(id).setPositionPID(((frame.data[1] << 8) | frame.data[2])/1000.0, ((frame.data[3] << 8) | frame.data[4])/1000.0, ((frame.data[5] << 8) | frame.data[6])/1000.0);
+                std::cout <<"CanBoard "<<id<<" position PID: p: "<<can_boards.at(id).getPositionPID().p<<", i: "<<can_boards.at(id).getPositionPID().i<<", d: "<<can_boards.at(id).getPositionPID().d<<std::endl;
+            }
+            // ---------------------------------------------------------------------------
+            // read can message with position PID from encoder ---------------------------
+            if (frame.data[0] == 0x19) {
+                can_boards.at(id).setVelocityPID(((frame.data[1] << 8) | frame.data[2])/1000.0, ((frame.data[3] << 8) | frame.data[4])/1000.0, ((frame.data[5] << 8) | frame.data[6])/1000.0);
+                std::cout <<"CanBoard "<<id<<" velocity PID: p: "<<can_boards.at(id).getVelocityPID().p<<", i: "<<can_boards.at(id).getVelocityPID().i<<", d: "<<can_boards.at(id).getVelocityPID().d<<std::endl;
+            }
+            // ---------------------------------------------------------------------------
+            //printf("0x%03X [%d] ",frame.can_id, frame.can_dlc);
+            //for (i = 0; i < frame.can_dlc; i++)
+            //    printf("%02X ",frame.data[i]);
+            //printf("\r\n");
         }
     }
     if (close(s) < 0) {
@@ -212,12 +226,94 @@ bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &re
     can_boards[req.id].setEncoderOffset(req.new_value);
     if (can_boards[req.id].getEncoderOffset() == req.new_value) {
         std::fstream file;
-        file.open("/home/miroslaw/manipulator_encoders_offsets.txt",std::ios_base::out);
+        file.open("/home/nvidia/manipulator_encoders_offsets.txt",std::ios_base::out);
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
         }
         file.close();
+        res.success = true;
+        return true;
+    }
+}
+
+bool CanBoards::setEncoderPositionPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res) {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+    if (s < 0) {
+        std::cout << "Can socket error!" << std::endl;
+    } else {
+        can_frame frame;
+        frame.can_id = can_boards.at(req.msg.can_id).getCanId();
+        frame.can_dlc = 7; // Number of bytes of data to send
+        frame.data[0] = 0x18; // Function type
+        frame.data[1] = int((req.msg.p*1000)) >> 8; // first byte
+        frame.data[2] = int((req.msg.p*1000)) & 0x00ff; // second byte
+        frame.data[3] = int((req.msg.i*1000)) >> 8; // first byte
+        frame.data[4] = int((req.msg.i*1000)) & 0x00ff; // second byte
+        frame.data[5] = int((req.msg.d*1000)) >> 8; // first byte
+        frame.data[6] = int((req.msg.d*1000)) & 0x00ff; // second byte
+        if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+            //perror("Write");
+        }
+        if (close(s) < 0) {
+            perror("Close");
+        }
+        res.success = true;
+        return true;
+    }
+}
+
+bool CanBoards::setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res) {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+    if (s < 0) {
+        std::cout << "Can socket error!" << std::endl;
+    } else {
+        can_frame frame;
+        frame.can_id = can_boards.at(req.msg.can_id).getCanId();
+        frame.can_dlc = 7; // Number of bytes of data to send
+        frame.data[0] = 0x19; // Function type
+        frame.data[1] = int((req.msg.p*1000)) >> 8; // first byte
+        frame.data[2] = int((req.msg.p*1000)) & 0x00ff; // second byte
+        frame.data[3] = int((req.msg.i*1000)) >> 8; // first byte
+        frame.data[4] = int((req.msg.i*1000)) & 0x00ff; // second byte
+        frame.data[5] = int((req.msg.d*1000)) >> 8; // first byte
+        frame.data[6] = int((req.msg.d*1000)) & 0x00ff; // second byte
+        if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+            //perror("Write");
+        }
+        if (close(s) < 0) {
+            perror("Close");
+        }
         res.success = true;
         return true;
     }
