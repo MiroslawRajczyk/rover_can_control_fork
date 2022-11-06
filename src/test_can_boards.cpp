@@ -9,15 +9,17 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(15));
     
     this->readEncodersOffsetsFromFile("/home/nvidia/manipulator_encoders_offsets.txt");
-
+    // Add CAN receiver thread    
+    th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
+    // Add CAN sender threads for all can boards in vector
     for(int i=0; i < can_boards.size(); i++){
         th.push_back(std::thread(&CanBoard::workerCanSender, &can_boards[i]));
-        std::cout <<"Created workerCanSender thread"<<std::endl;
-        //th.push_back(std::thread(&CanBoard::workerCanReceiver, &can_boards[i]));
-        //std::cout <<"Created workerCanRrecever thread"<<std::endl;
+        std::cout <<"Created thread for CanBoard "<<i<<" with function: workerCanSender."<<std::endl;
+        // Request position PID for can board
+        sendCanFrameRequest(can_boards.at(i).getCanId(),0x18);
+        // Request velocity PID for can board
+        sendCanFrameRequest(can_boards.at(i).getCanId(),0x19);
     }
-    th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
-    
 
     ros::NodeHandle node_handler("can_board_driver");
     velocityGoalSubscriber = node_handler.subscribe("velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
@@ -316,5 +318,39 @@ bool CanBoards::setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, 
         }
         res.success = true;
         return true;
+    }
+}
+
+void CanBoards::sendCanFrameRequest(int can_board_id, int can_frame_type) {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+    if (s < 0) {
+        std::cout << "Can socket error!" << std::endl;
+    } else {
+        can_frame frame;
+        frame.can_id = can_board_id;
+        frame.can_dlc = 2; // Number of bytes of data to send
+        frame.data[0] = 0x01; // Function type
+        frame.data[1] = can_frame_type;
+        if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+            //perror("Write");
+        }
+        if (close(s) < 0) {
+            perror("Close");
+        }
     }
 }

@@ -40,5 +40,5 @@ class CanBoards {
     bool setEncoderOffsetCallback(tools::encoder_set_offset::Request  &req, tools::encoder_set_offset::Response &res);
     bool setEncoderPositionPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res);
     bool setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res);
-
+    void sendCanFrameRequest(int can_board_id, int can_frame_type);
 };

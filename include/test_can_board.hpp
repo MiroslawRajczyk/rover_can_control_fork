@@ -50,7 +50,6 @@ class CanBoard {
         PID positionPID;
         EffortLimits effortLimits;
         PositionLimits positionLimits;
-        //std::atomic<int> can_socket;
         //void sendFrameRequest(unsigned char requested_frame_ID);
     public:
         CanBoard(int id);

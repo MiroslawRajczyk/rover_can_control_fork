@@ -24,8 +24,7 @@ unsigned int positionToEncoderReadings(double position) {
     return tmp_position;
 }
 
-void CanBoard::workerCanSender()
-{
+void CanBoard::workerCanSender() {
     int s, i;
     int nbytes;
     struct sockaddr_can addr;
@@ -51,6 +50,7 @@ void CanBoard::workerCanSender()
                 case 10: frame = this->getEffortFrame(); break;
                 case 11: frame = this->getPositionFrame(); break;
                 case 12: frame = this->getVelocityFrame(); break;
+                default: continue;
             }
 
             if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
