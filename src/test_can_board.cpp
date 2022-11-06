@@ -80,7 +80,7 @@ can_frame CanBoard::getPositionFrame() {
         throw "Invalid position value! Outside of range <-180, 180>";
     struct can_frame frame;
     //unsigned int tmp_position = positionToEncoderReadings(getPositionGoal() + getEncoderOffset() - 180.0); -- konsultacja z Tomkiem - próbujemy wyjebać offset
-    unsigned int tmp_position = positionToEncoderReadings(getPositionGoal() - getEncoderOffset() - 180.0);
+    unsigned int tmp_position = positionToEncoderReadings(getPositionGoal() - 180.0);
     frame.can_id = can_id;
     frame.can_dlc = 3; // Number of bytes of data to send
     frame.data[0] = 0x11; // Function type

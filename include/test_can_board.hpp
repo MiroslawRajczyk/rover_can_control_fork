@@ -90,7 +90,7 @@ class CanBoard {
         const EffortLimits & getEffortLimits() const { return effortLimits; }
         void setEffortLimits(int min, int max) { effortLimits.min = min; effortLimits.max = max; };
         const PositionLimits & getPositionLimits() const { return positionLimits; }
-        void setPositionLimits(int from, int to) { positionLimits.from = from; positionLimits.to = to; };
+        void setPositionLimits(float from, float to) { positionLimits.from = from; positionLimits.to = to; };
 
 
 };

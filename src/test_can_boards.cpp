@@ -7,7 +7,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(13));
     can_boards.push_back(CanBoard(14));
     can_boards.push_back(CanBoard(15));
-    
+
     this->readEncodersOffsetsFromFile("/home/nvidia/manipulator_encoders_offsets.txt");
     // Add CAN receiver thread    
     th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
@@ -19,6 +19,12 @@ CanBoards::CanBoards() {
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x18);
         // Request velocity PID for can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x19);
+        // Request position limits from can board
+        sendCanFrameRequest(can_boards.at(i).getCanId(),0x1A);
+        // Request effort limits from can board
+        sendCanFrameRequest(can_boards.at(i).getCanId(),0x1B);
+        // Request encoders readings CAN Frames frequency can board
+        sendCanFrameRequest(can_boards.at(i).getCanId(),0x1C);
     }
 
     ros::NodeHandle node_handler("can_board_driver");
@@ -193,6 +199,24 @@ void CanBoards::workerCanReceiver() {
                 std::cout <<"CanBoard "<<id<<" velocity PID: p: "<<can_boards.at(id).getVelocityPID().p<<", i: "<<can_boards.at(id).getVelocityPID().i<<", d: "<<can_boards.at(id).getVelocityPID().d<<std::endl;
             }
             // ---------------------------------------------------------------------------
+            // read can message with position limits from encoder ------------------------
+            if (frame.data[0] == 0x1A) {
+                can_boards.at(id).setPositionLimits((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0, (((frame.data[3] << 8) | frame.data[4])*360.0/4096.0-180));
+                std::cout <<"CanBoard "<<id<<" position limits: from:"<<can_boards.at(id).getPositionLimits().from<<", to: "<<can_boards.at(id).getPositionLimits().to<<std::endl;
+            }
+            // ---------------------------------------------------------------------------
+            // read can message with effort limits from encoder --------------------------
+            if (frame.data[0] == 0x1B) {
+                can_boards.at(id).setEffortLimits(frame.data[1], frame.data[2]);
+                std::cout <<"CanBoard "<<id<<" effort limits: min:"<<can_boards.at(id).getEffortLimits().min<<", max: "<<can_boards.at(id).getEffortLimits().max<<std::endl;
+            }
+            // ---------------------------------------------------------------------------
+            // read can message with position PID from encoder ---------------------------
+            if (frame.data[0] == 0x1C) {
+                can_boards.at(id).setEncoderReadingsFrequency(100/frame.data[1]);
+                std::cout <<"CanBoard "<<id<<" readings frequency: "<<can_boards.at(id).getEncoderReadingsFrequency()<<std::endl;
+            }
+            // ---------------------------------------------------------------------------
             //printf("0x%03X [%d] ",frame.can_id, frame.can_dlc);
             //for (i = 0; i < frame.can_dlc; i++)
             //    printf("%02X ",frame.data[i]);
@@ -354,3 +378,4 @@ void CanBoards::sendCanFrameRequest(int can_board_id, int can_frame_type) {
         }
     }
 }
+
