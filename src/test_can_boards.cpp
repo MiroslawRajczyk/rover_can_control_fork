@@ -39,6 +39,7 @@ CanBoards::CanBoards() {
     setEncoderVelocityPidService = node_handler.advertiseService("set_encoder_velocity_pid", &CanBoards::setEncoderVelocityPidCallback, this);
     setEncoderPositionLimitsService = node_handler.advertiseService("set_encoder_position_limits", &CanBoards::setEncoderPositionLimitsCallback, this);
     setEncoderEffortLimitsService = node_handler.advertiseService("set_encoder_effort_limits", &CanBoards::setEncoderEffortLimitsCallback, this);
+    setEncoderReadingsFrequencyService = node_handler.advertiseService("set_encoder_readings_frequency", &CanBoards::setEncoderReadingsFrequencyCallback, this);
     th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher));
 }
 
@@ -419,6 +420,47 @@ bool CanBoards::setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Requ
             frame.data[0] = 0x1B; // Function type
             frame.data[1] = req.msg.min; // first byte
             frame.data[2] = req.msg.max; // second byte
+            if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+                //perror("Write");
+            }
+            if (close(s) < 0) {
+                perror("Close");
+            }
+            res.success = true;
+            return true;
+        } else {
+            res.success = false;
+            return false;
+        }
+    }
+}
+
+bool CanBoards::setEncoderReadingsFrequencyCallback(tools::cb_set_frequency::Request  &req, tools::cb_set_frequency::Response &res) {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+    if (s < 0) {
+        std::cout << "Can socket error!" << std::endl;
+    } else {
+        if ((req.frequency > 0) && (req.frequency <= 100)) {
+            can_frame frame;
+            frame.can_id = can_boards.at(req.can_id).getCanId();
+            frame.can_dlc = 2; // Number of bytes of data to send
+            frame.data[0] = 0x1C; // Function type
+            frame.data[1] = 100/req.frequency; // Calculating divider
             if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
                 //perror("Write");
             }

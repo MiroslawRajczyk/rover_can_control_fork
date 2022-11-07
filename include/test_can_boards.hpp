@@ -9,7 +9,7 @@
 #include "tools/cb_set_pid.h"
 #include "tools/cb_set_pose_limits.h"
 #include "tools/cb_set_effort_limits.h"
-
+#include "tools/cb_set_frequency.h"
 #include "std_msgs/String.h"
 
 #include <vector>
@@ -26,7 +26,8 @@ class CanBoards {
         std::vector<std::thread> th;
         ros::Subscriber velocityGoalSubscriber, positionGoalSubscriber, effortGoalSubscriber;
         ros::ServiceServer setEncoderOffsetService, setEncoderPositionPidService,
-            setEncoderVelocityPidService, setEncoderPositionLimitsService, setEncoderEffortLimitsService;
+            setEncoderVelocityPidService, setEncoderPositionLimitsService, setEncoderEffortLimitsService,
+            setEncoderReadingsFrequencyService;
     public:
     CanBoards();
     ~CanBoards();
@@ -45,5 +46,6 @@ class CanBoards {
     bool setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res);
     bool setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Request  &req, tools::cb_set_pose_limits::Response &res);
     bool setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Request  &req, tools::cb_set_effort_limits::Response &res);
+    bool setEncoderReadingsFrequencyCallback(tools::cb_set_frequency::Request  &req, tools::cb_set_frequency::Response &res);
     void sendCanFrameRequest(int can_board_id, int can_frame_type);
 };
