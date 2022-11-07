@@ -17,14 +17,19 @@ CanBoards::CanBoards() {
         std::cout <<"Created thread for CanBoard "<<i<<" with function: workerCanSender."<<std::endl;
         // Request position PID for can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x18);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         // Request velocity PID for can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x19);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         // Request position limits from can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x1A);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         // Request effort limits from can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x1B);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         // Request encoders readings CAN Frames frequency can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x1C);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     ros::NodeHandle node_handler("can_board_driver");
@@ -34,6 +39,8 @@ CanBoards::CanBoards() {
     ros::Publisher positionPublisher = node_handler.advertise<tools::PoseController>("get_position_real", 1);
     ros::Publisher velocityPublisher = node_handler.advertise<tools::CbVelocityArray>("get_velocity_real", 1);
     ros::Publisher effortPublisher = node_handler.advertise<tools::CbEffortArray>("get_effort_real", 1);
+    ros::Publisher positionPidsPublisher = node_handler.advertise<tools::CbPidArray>("get_position_pids", 1);
+    ros::Publisher velocityPidsPublisher = node_handler.advertise<tools::CbPidArray>("get_velocity_pids", 1);
     ros::Publisher positionLimitsPublisher = node_handler.advertise<tools::CbPositionLimitsArray>("get_position_limits", 1);
     ros::Publisher effortLimitsPublisher = node_handler.advertise<tools::CbEffortLimitsArray>("get_effort_limits", 1);
     setEncoderOffsetService = node_handler.advertiseService("set_encoder_offset", &CanBoards::setEncoderOffsetCallback, this);
@@ -42,7 +49,7 @@ CanBoards::CanBoards() {
     setEncoderPositionLimitsService = node_handler.advertiseService("set_encoder_position_limits", &CanBoards::setEncoderPositionLimitsCallback, this);
     setEncoderEffortLimitsService = node_handler.advertiseService("set_encoder_effort_limits", &CanBoards::setEncoderEffortLimitsCallback, this);
     setEncoderReadingsFrequencyService = node_handler.advertiseService("set_encoder_readings_frequency", &CanBoards::setEncoderReadingsFrequencyCallback, this);
-    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher, positionLimitsPublisher, effortLimitsPublisher));
+    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher, positionLimitsPublisher, effortLimitsPublisher, positionPidsPublisher, velocityPidsPublisher));
 }
 
 CanBoards::~CanBoards() {
@@ -232,7 +239,7 @@ void CanBoards::workerCanReceiver() {
     }
 }
 
-void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub) {
+void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub, ros::Publisher positionPidsPublisher, ros::Publisher velocityPidsPublisher) {
     ros::Rate loop_rate(10);
     while (ros::ok()) {
         tools::PoseController poseMsg;
@@ -246,6 +253,28 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
         tools::CbEffortArray effMsg;
         effMsg.effort = {can_boards.at(0).getEffortReal(),can_boards.at(1).getEffortReal(),can_boards.at(2).getEffortReal(),can_boards.at(3).getEffortReal(),can_boards.at(4).getEffortReal(),can_boards.at(5).getEffortReal()};
         effortPub.publish(effMsg);
+
+        tools::CbPidArray positionPidMsgArray;
+        tools::CbPid tmpPositionPidMsg;
+        for (int j = 0; j < can_boards.size(); j++) {
+            tmpPositionPidMsg.can_id = can_boards.at(j).getCanId();
+            tmpPositionPidMsg.p = can_boards.at(j).getPositionPID().p;
+            tmpPositionPidMsg.i = can_boards.at(j).getPositionPID().i;
+            tmpPositionPidMsg.d = can_boards.at(j).getPositionPID().d;
+            positionPidMsgArray.data.push_back(tmpPositionPidMsg);
+        }
+        positionPidsPublisher.publish(positionPidMsgArray);
+
+        tools::CbPidArray velocityPidMsgArray;
+        tools::CbPid tmpVelocityPidMsg;
+        for (int j = 0; j < can_boards.size(); j++) {
+            tmpVelocityPidMsg.can_id = can_boards.at(j).getCanId();
+            tmpVelocityPidMsg.p = can_boards.at(j).getVelocityPID().p;
+            tmpVelocityPidMsg.i = can_boards.at(j).getVelocityPID().i;
+            tmpVelocityPidMsg.d = can_boards.at(j).getVelocityPID().d;
+            velocityPidMsgArray.data.push_back(tmpVelocityPidMsg);
+        }
+        velocityPidsPublisher.publish(velocityPidMsgArray);
 
         tools::CbPositionLimitsArray posLimMsgArr;
         tools::CbPoseLimits tmpPosLimMsg;
