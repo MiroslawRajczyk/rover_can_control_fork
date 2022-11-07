@@ -2,7 +2,6 @@
 
 #include <linux/can.h>
 #include <atomic>
-
 unsigned int positionToEncoderReadings(double position);
 
 struct PID {

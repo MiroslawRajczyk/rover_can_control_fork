@@ -28,19 +28,21 @@ CanBoards::CanBoards() {
     }
 
     ros::NodeHandle node_handler("can_board_driver");
-    velocityGoalSubscriber = node_handler.subscribe("velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
-    positionGoalSubscriber = node_handler.subscribe("position_goal", 1, &CanBoards::positionGoalSubscriberCallback, this);
-    effortGoalSubscriber = node_handler.subscribe("effort_goal", 1, &CanBoards::effortGoalSubscriberCallback, this);
-    ros::Publisher positionPublisher = node_handler.advertise<tools::PoseController>("position_real", 1);
-    ros::Publisher velocityPublisher = node_handler.advertise<tools::CbVelocityArray>("velocity_real", 1);
-    ros::Publisher effortPublisher = node_handler.advertise<tools::CbEffortArray>("effort_real", 1);
+    velocityGoalSubscriber = node_handler.subscribe("set_velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
+    positionGoalSubscriber = node_handler.subscribe("set_position_goal", 1, &CanBoards::positionGoalSubscriberCallback, this);
+    effortGoalSubscriber = node_handler.subscribe("set_effort_goal", 1, &CanBoards::effortGoalSubscriberCallback, this);
+    ros::Publisher positionPublisher = node_handler.advertise<tools::PoseController>("get_position_real", 1);
+    ros::Publisher velocityPublisher = node_handler.advertise<tools::CbVelocityArray>("get_velocity_real", 1);
+    ros::Publisher effortPublisher = node_handler.advertise<tools::CbEffortArray>("get_effort_real", 1);
+    ros::Publisher positionLimitsPublisher = node_handler.advertise<tools::CbPositionLimitsArray>("get_position_limits", 1);
+    ros::Publisher effortLimitsPublisher = node_handler.advertise<tools::CbEffortLimitsArray>("get_effort_limits", 1);
     setEncoderOffsetService = node_handler.advertiseService("set_encoder_offset", &CanBoards::setEncoderOffsetCallback, this);
     setEncoderPositionPidService = node_handler.advertiseService("set_encoder_position_pid", &CanBoards::setEncoderPositionPidCallback, this);
     setEncoderVelocityPidService = node_handler.advertiseService("set_encoder_velocity_pid", &CanBoards::setEncoderVelocityPidCallback, this);
     setEncoderPositionLimitsService = node_handler.advertiseService("set_encoder_position_limits", &CanBoards::setEncoderPositionLimitsCallback, this);
     setEncoderEffortLimitsService = node_handler.advertiseService("set_encoder_effort_limits", &CanBoards::setEncoderEffortLimitsCallback, this);
     setEncoderReadingsFrequencyService = node_handler.advertiseService("set_encoder_readings_frequency", &CanBoards::setEncoderReadingsFrequencyCallback, this);
-    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher));
+    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher, positionLimitsPublisher, effortLimitsPublisher));
 }
 
 CanBoards::~CanBoards() {
@@ -230,7 +232,7 @@ void CanBoards::workerCanReceiver() {
     }
 }
 
-void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub) {
+void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub) {
     ros::Rate loop_rate(10);
     while (ros::ok()) {
         tools::PoseController poseMsg;
@@ -244,6 +246,26 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
         tools::CbEffortArray effMsg;
         effMsg.effort = {can_boards.at(0).getEffortReal(),can_boards.at(1).getEffortReal(),can_boards.at(2).getEffortReal(),can_boards.at(3).getEffortReal(),can_boards.at(4).getEffortReal(),can_boards.at(5).getEffortReal()};
         effortPub.publish(effMsg);
+
+        tools::CbPositionLimitsArray posLimMsgArr;
+        tools::CbPoseLimits tmpPosLimMsg;
+        for (int i = 0; i < can_boards.size(); i++) {
+            tmpPosLimMsg.can_id = can_boards.at(i).getCanId();
+            tmpPosLimMsg.from = can_boards.at(i).getPositionLimits().from;
+            tmpPosLimMsg.to = can_boards.at(i).getPositionLimits().to;
+            posLimMsgArr.data.push_back(tmpPosLimMsg);
+        }
+        positionLimitsPub.publish(posLimMsgArr);
+
+        tools::CbEffortLimitsArray effLimMsgArr;
+        tools::CbEffortLimits tmpEffLimMsg;
+        for (int i = 0; i < can_boards.size(); i++) {
+            tmpEffLimMsg.can_id = can_boards.at(i).getCanId();
+            tmpEffLimMsg.min = can_boards.at(i).getEffortLimits().min;
+            tmpEffLimMsg.max = can_boards.at(i).getEffortLimits().max;
+            effLimMsgArr.data.push_back(tmpEffLimMsg);
+        }
+        effortLimitsPub.publish(effLimMsgArr);
 
         ros::spinOnce();
         loop_rate.sleep();
@@ -285,6 +307,7 @@ bool CanBoards::setEncoderPositionPidCallback(tools::cb_set_pid::Request  &req, 
     if (s < 0) {
         std::cout << "Can socket error!" << std::endl;
     } else {
+        setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         can_frame frame;
         frame.can_id = can_boards.at(req.msg.can_id).getCanId();
         frame.can_dlc = 7; // Number of bytes of data to send
@@ -326,6 +349,7 @@ bool CanBoards::setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, 
     if (s < 0) {
         std::cout << "Can socket error!" << std::endl;
     } else {
+        setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         can_frame frame;
         frame.can_id = can_boards.at(req.msg.can_id).getCanId();
         frame.can_dlc = 7; // Number of bytes of data to send
@@ -367,6 +391,7 @@ bool CanBoards::setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Requ
     if (s < 0) {
         std::cout << "Can socket error!" << std::endl;
     } else {
+        setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         if ((req.msg.from >= -180) && (req.msg.from < 180) && (req.msg.to >= -180) && (req.msg.to < 180)) {
             can_frame frame;
             unsigned int tmp_from = positionToEncoderReadings(req.msg.from - 180.0); // what with offsets
@@ -413,6 +438,7 @@ bool CanBoards::setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Requ
     if (s < 0) {
         std::cout << "Can socket error!" << std::endl;
     } else {
+        setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         if((req.msg.min >= 0) && (req.msg.min <= 100) && (req.msg.max >= 0) && (req.msg.max <= 100) && (req.msg.min <= req.msg.max)) {
             can_frame frame;
             frame.can_id = can_boards.at(req.msg.can_id).getCanId();
@@ -455,6 +481,7 @@ bool CanBoards::setEncoderReadingsFrequencyCallback(tools::cb_set_frequency::Req
     if (s < 0) {
         std::cout << "Can socket error!" << std::endl;
     } else {
+        setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         if ((req.frequency > 0) && (req.frequency <= 100)) {
             can_frame frame;
             frame.can_id = can_boards.at(req.can_id).getCanId();
@@ -496,6 +523,7 @@ void CanBoards::sendCanFrameRequest(int can_board_id, int can_frame_type) {
     if (s < 0) {
         std::cout << "Can socket error!" << std::endl;
     } else {
+        setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         can_frame frame;
         frame.can_id = can_board_id;
         frame.can_dlc = 2; // Number of bytes of data to send
@@ -509,4 +537,3 @@ void CanBoards::sendCanFrameRequest(int can_board_id, int can_frame_type) {
         }
     }
 }
-

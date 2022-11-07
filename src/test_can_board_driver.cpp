@@ -3,15 +3,17 @@
 
 #include "../include/test_can_boards.hpp"
 #include "../include/test_manipulator_interface.hpp"
+#include "../include/test_common.h"
+
 
 bool enableThreads = true;
-
+int globalLoopback;
 void sigIntHandler(int s){
     enableThreads = false;
 }
 
 int main(int argc, char **argv) {
-    
+    globalLoopback = 1;
     ros::init(argc, argv, "test_can_board_driver");
     CanBoards boards;
 

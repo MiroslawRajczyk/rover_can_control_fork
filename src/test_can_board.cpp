@@ -41,7 +41,7 @@ void CanBoard::workerCanSender() {
             perror("Bind");
             exit(1);
         }
-
+    setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
     while (isEnabled) {
         if (s < 0) {
             std::cout << "Can socket error!" << std::endl;
