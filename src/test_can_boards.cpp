@@ -9,10 +9,10 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(15));
 
     this->readEncodersOffsetsFromFile("/home/nvidia/manipulator_encoders_offsets.txt");
-    // Add CAN receiver thread    
+    // Add CAN receiver thread
     th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
-    // Add CAN sender threads for all can boards in vector
     for(int i=0; i < can_boards.size(); i++){
+        // Add CAN sender thread for can board
         th.push_back(std::thread(&CanBoard::workerCanSender, &can_boards[i]));
         std::cout <<"Created thread for CanBoard "<<i<<" with function: workerCanSender."<<std::endl;
         // Request position PID for can board
@@ -37,7 +37,8 @@ CanBoards::CanBoards() {
     setEncoderOffsetService = node_handler.advertiseService("set_encoder_offset", &CanBoards::setEncoderOffsetCallback, this);
     setEncoderPositionPidService = node_handler.advertiseService("set_encoder_position_pid", &CanBoards::setEncoderPositionPidCallback, this);
     setEncoderVelocityPidService = node_handler.advertiseService("set_encoder_velocity_pid", &CanBoards::setEncoderVelocityPidCallback, this);
-
+    setEncoderPositionLimitsService = node_handler.advertiseService("set_encoder_position_limits", &CanBoards::setEncoderPositionLimitsCallback, this);
+    setEncoderEffortLimitsService = node_handler.advertiseService("set_encoder_effort_limits", &CanBoards::setEncoderEffortLimitsCallback, this);
     th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher));
 }
 
@@ -211,7 +212,7 @@ void CanBoards::workerCanReceiver() {
                 std::cout <<"CanBoard "<<id<<" effort limits: min:"<<can_boards.at(id).getEffortLimits().min<<", max: "<<can_boards.at(id).getEffortLimits().max<<std::endl;
             }
             // ---------------------------------------------------------------------------
-            // read can message with position PID from encoder ---------------------------
+            // read can message with readings frequency from encoder ---------------------
             if (frame.data[0] == 0x1C) {
                 can_boards.at(id).setEncoderReadingsFrequency(100/frame.data[1]);
                 std::cout <<"CanBoard "<<id<<" readings frequency: "<<can_boards.at(id).getEncoderReadingsFrequency()<<std::endl;
@@ -342,6 +343,94 @@ bool CanBoards::setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, 
         }
         res.success = true;
         return true;
+    }
+}
+
+bool CanBoards::setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Request  &req, tools::cb_set_pose_limits::Response &res) {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+    if (s < 0) {
+        std::cout << "Can socket error!" << std::endl;
+    } else {
+        if ((req.msg.from >= -180) && (req.msg.from < 180) && (req.msg.to >= -180) && (req.msg.to < 180)) {
+            can_frame frame;
+            unsigned int tmp_from = positionToEncoderReadings(req.msg.from - 180.0); // what with offsets
+            unsigned int tmp_to = positionToEncoderReadings(req.msg.to - 180.0);
+            frame.can_id = can_boards.at(req.msg.can_id).getCanId();
+            frame.can_dlc = 5; // Number of bytes of data to send
+            frame.data[0] = 0x1A; // Function type
+            frame.data[1] = tmp_from >> 8; // first byte;
+            frame.data[2] = tmp_from & 0x00ff; // second byte;
+            frame.data[3] = tmp_to >> 8; // first byte;
+            frame.data[4] = tmp_to & 0x00ff; // second byte;
+            if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+                //perror("Write");
+            }
+            if (close(s) < 0) {
+                perror("Close");
+            }
+            res.success = true;
+            return true;
+        } else {
+            res.success = false;
+            return false;
+        }
+    }
+}
+
+bool CanBoards::setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Request  &req, tools::cb_set_effort_limits::Response &res) {
+    int s, i;
+    int nbytes;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    strcpy(ifr.ifr_name, "vcan0");
+    ioctl(s, SIOCGIFINDEX, &ifr);
+    memset(&addr, 0, sizeof(addr));
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("Bind");
+        exit(1);
+    }
+    if (s < 0) {
+        std::cout << "Can socket error!" << std::endl;
+    } else {
+        if((req.msg.min >= 0) && (req.msg.min <= 100) && (req.msg.max >= 0) && (req.msg.max <= 100) && (req.msg.min <= req.msg.max)) {
+            can_frame frame;
+            frame.can_id = can_boards.at(req.msg.can_id).getCanId();
+            frame.can_dlc = 3; // Number of bytes of data to send
+            frame.data[0] = 0x1B; // Function type
+            frame.data[1] = req.msg.min; // first byte
+            frame.data[2] = req.msg.max; // second byte
+            if (write(s, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+                //perror("Write");
+            }
+            if (close(s) < 0) {
+                perror("Close");
+            }
+            res.success = true;
+            return true;
+        } else {
+            res.success = false;
+            return false;
+        }
     }
 }
 

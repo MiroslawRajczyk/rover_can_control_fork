@@ -7,6 +7,8 @@
 #include "tools/PoseController.h"
 #include "tools/encoder_set_offset.h"
 #include "tools/cb_set_pid.h"
+#include "tools/cb_set_pose_limits.h"
+#include "tools/cb_set_effort_limits.h"
 
 #include "std_msgs/String.h"
 
@@ -23,7 +25,8 @@ class CanBoards {
         std::vector<CanBoard> can_boards;
         std::vector<std::thread> th;
         ros::Subscriber velocityGoalSubscriber, positionGoalSubscriber, effortGoalSubscriber;
-        ros::ServiceServer setEncoderOffsetService, setEncoderPositionPidService, setEncoderVelocityPidService;
+        ros::ServiceServer setEncoderOffsetService, setEncoderPositionPidService,
+            setEncoderVelocityPidService, setEncoderPositionLimitsService, setEncoderEffortLimitsService;
     public:
     CanBoards();
     ~CanBoards();
@@ -40,5 +43,7 @@ class CanBoards {
     bool setEncoderOffsetCallback(tools::encoder_set_offset::Request  &req, tools::encoder_set_offset::Response &res);
     bool setEncoderPositionPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res);
     bool setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, tools::cb_set_pid::Response &res);
+    bool setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Request  &req, tools::cb_set_pose_limits::Response &res);
+    bool setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Request  &req, tools::cb_set_effort_limits::Response &res);
     void sendCanFrameRequest(int can_board_id, int can_frame_type);
 };
