@@ -31,7 +31,7 @@ void CanBoard::workerCanSender() {
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
         ioctl(s, SIOCGIFINDEX, &ifr);
         memset(&addr, 0, sizeof(addr));
         addr.can_family = AF_CAN;

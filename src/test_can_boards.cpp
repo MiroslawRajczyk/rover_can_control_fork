@@ -8,7 +8,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(14));
     can_boards.push_back(CanBoard(15));
 
-    this->readEncodersOffsetsFromFile("/home/nvidia/manipulator_encoders_offsets.txt");
+    this->readEncodersOffsetsFromFile("/home/miroslaw/manipulator_encoders_offsets.txt");
     // Add CAN receiver thread
     th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
     for(int i=0; i < can_boards.size(); i++){
@@ -43,13 +43,15 @@ CanBoards::CanBoards() {
     ros::Publisher velocityPidsPublisher = node_handler.advertise<tools::CbPidArray>("get_velocity_pids", 1);
     ros::Publisher positionLimitsPublisher = node_handler.advertise<tools::CbPositionLimitsArray>("get_position_limits", 1);
     ros::Publisher effortLimitsPublisher = node_handler.advertise<tools::CbEffortLimitsArray>("get_effort_limits", 1);
+    ros::Publisher encoderOffsetPublisher = node_handler.advertise<tools::CbOffsetArray>("get_encoders_offsets", 1);
+    ros::Publisher readingsFrequencyPublisher = node_handler.advertise<tools::CbFrequencyArray>("get_readings_frequencies", 1);
     setEncoderOffsetService = node_handler.advertiseService("set_encoder_offset", &CanBoards::setEncoderOffsetCallback, this);
-    setEncoderPositionPidService = node_handler.advertiseService("set_encoder_position_pid", &CanBoards::setEncoderPositionPidCallback, this);
-    setEncoderVelocityPidService = node_handler.advertiseService("set_encoder_velocity_pid", &CanBoards::setEncoderVelocityPidCallback, this);
-    setEncoderPositionLimitsService = node_handler.advertiseService("set_encoder_position_limits", &CanBoards::setEncoderPositionLimitsCallback, this);
-    setEncoderEffortLimitsService = node_handler.advertiseService("set_encoder_effort_limits", &CanBoards::setEncoderEffortLimitsCallback, this);
-    setEncoderReadingsFrequencyService = node_handler.advertiseService("set_encoder_readings_frequency", &CanBoards::setEncoderReadingsFrequencyCallback, this);
-    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher, positionLimitsPublisher, effortLimitsPublisher, positionPidsPublisher, velocityPidsPublisher));
+    setEncoderPositionPidService = node_handler.advertiseService("set_position_pid", &CanBoards::setEncoderPositionPidCallback, this);
+    setEncoderVelocityPidService = node_handler.advertiseService("set_velocity_pid", &CanBoards::setEncoderVelocityPidCallback, this);
+    setEncoderPositionLimitsService = node_handler.advertiseService("set_position_limits", &CanBoards::setEncoderPositionLimitsCallback, this);
+    setEncoderEffortLimitsService = node_handler.advertiseService("set_effort_limits", &CanBoards::setEncoderEffortLimitsCallback, this);
+    setEncoderReadingsFrequencyService = node_handler.advertiseService("set_readings_frequency", &CanBoards::setEncoderReadingsFrequencyCallback, this);
+    th.push_back(std::thread(&CanBoards::workerRosPublisher, this, positionPublisher, velocityPublisher, effortPublisher, positionLimitsPublisher, effortLimitsPublisher, positionPidsPublisher, velocityPidsPublisher, encoderOffsetPublisher, readingsFrequencyPublisher));
 }
 
 CanBoards::~CanBoards() {
@@ -152,7 +154,7 @@ void CanBoards::workerCanReceiver() {
 	rfilter[5].can_mask = 0xFFF;
 
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -239,7 +241,7 @@ void CanBoards::workerCanReceiver() {
     }
 }
 
-void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub, ros::Publisher positionPidsPublisher, ros::Publisher velocityPidsPublisher) {
+void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub, ros::Publisher positionPidsPublisher, ros::Publisher velocityPidsPublisher, ros::Publisher encoderOffsetPublisher, ros::Publisher readingsFrequencyPublisher) {
     ros::Rate loop_rate(10);
     while (ros::ok()) {
         tools::PoseController poseMsg;
@@ -296,6 +298,14 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
         }
         effortLimitsPub.publish(effLimMsgArr);
 
+        tools::CbOffsetArray offsetMsg;
+        offsetMsg.offset = {can_boards.at(0).getEncoderOffset(), can_boards.at(1).getEncoderOffset(), can_boards.at(2).getEncoderOffset(), can_boards.at(3).getEncoderOffset(), can_boards.at(4).getEncoderOffset(), can_boards.at(5).getEncoderOffset()};
+        encoderOffsetPublisher.publish(offsetMsg);
+
+        tools::CbFrequencyArray frequencyArrayMsg;
+        frequencyArrayMsg.frequency = {can_boards.at(0).getEncoderReadingsFrequency(), can_boards.at(1).getEncoderReadingsFrequency(), can_boards.at(2).getEncoderReadingsFrequency(), can_boards.at(3).getEncoderReadingsFrequency(), can_boards.at(4).getEncoderReadingsFrequency(), can_boards.at(5).getEncoderReadingsFrequency()};
+        readingsFrequencyPublisher.publish(frequencyArrayMsg);
+
         ros::spinOnce();
         loop_rate.sleep();
     }
@@ -305,7 +315,7 @@ bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &re
     can_boards[req.id].setEncoderOffset(req.new_value);
     if (can_boards[req.id].getEncoderOffset() == req.new_value) {
         std::fstream file;
-        file.open("/home/nvidia/manipulator_encoders_offsets.txt",std::ios_base::out);
+        file.open("/home/miroslaw/manipulator_encoders_offsets.txt",std::ios_base::out);
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
@@ -323,7 +333,7 @@ bool CanBoards::setEncoderPositionPidCallback(tools::cb_set_pid::Request  &req, 
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -365,7 +375,7 @@ bool CanBoards::setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, 
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -407,7 +417,7 @@ bool CanBoards::setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Requ
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -454,7 +464,7 @@ bool CanBoards::setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Requ
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -497,7 +507,7 @@ bool CanBoards::setEncoderReadingsFrequencyCallback(tools::cb_set_frequency::Req
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -539,7 +549,7 @@ void CanBoards::sendCanFrameRequest(int can_board_id, int can_frame_type) {
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "vcan0");
+    strcpy(ifr.ifr_name, globalCanInterface);
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;

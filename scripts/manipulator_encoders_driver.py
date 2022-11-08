@@ -59,14 +59,14 @@ class ManipulatorEncodersDriver:
         return self.encoder_offset[req.id]
 
     def load_offsets(self):
-        file= open('/home/nvidia/manipluator_encoders_offests.txt', 'r')
+        file= open('/home/miroslaw/manipluator_encoders_offests.txt', 'r')
         current_offset_number = 0
         for line in file:
             self.encoder_offset[current_offset_number] = float(line)
             current_offset_number += 1
 
     def save_offsets(self):
-        file= open('/home/nvidia/manipluator_encoders_offests.txt', 'w')
+        file= open('/home/miroslaw/manipluator_encoders_offests.txt', 'w')
         for offset in self.encoder_offset:
             file.write(str(offset) + "\n")
 

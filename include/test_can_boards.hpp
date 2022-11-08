@@ -10,6 +10,8 @@
 #include "tools/CbPositionLimitsArray.h"
 #include "tools/CbPid.h"
 #include "tools/CbPidArray.h"
+#include "tools/CbFrequencyArray.h"
+#include "tools/CbOffsetArray.h"
 #include "tools/encoder_set_offset.h"
 #include "tools/cb_set_pid.h"
 #include "tools/cb_set_pose_limits.h"
@@ -44,7 +46,7 @@ class CanBoards {
     void positionGoalSubscriberCallback(const tools::CbPositionArray::ConstPtr& msg);
     void effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPtr& msg);
     void workerCanReceiver();
-    void workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub, ros::Publisher positionPidsPublisher, ros::Publisher velocityPidsPublisher);
+    void workerRosPublisher(ros::Publisher positionPub, ros::Publisher velocityPub, ros::Publisher effortPub, ros::Publisher positionLimitsPub, ros::Publisher effortLimitsPub, ros::Publisher positionPidsPublisher, ros::Publisher velocityPidsPublisher, ros::Publisher encoderOffsetPublisher, ros::Publisher readingsFrequencyPublisher);
 
     void readEncodersOffsetsFromFile(std::string path);
     bool setEncoderOffsetCallback(tools::encoder_set_offset::Request  &req, tools::encoder_set_offset::Response &res);

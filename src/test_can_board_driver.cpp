@@ -5,6 +5,7 @@
 #include "../include/test_manipulator_interface.hpp"
 #include "../include/test_common.h"
 
+char* globalCanInterface;
 
 bool enableThreads = true;
 int globalLoopback;
@@ -14,6 +15,7 @@ void sigIntHandler(int s){
 
 int main(int argc, char **argv) {
     globalLoopback = 1;
+    globalCanInterface = "vcan0";
     ros::init(argc, argv, "test_can_board_driver");
     CanBoards boards;
 

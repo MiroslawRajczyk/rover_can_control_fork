@@ -67,7 +67,7 @@ class StatusLEDDriver:
 
     def load_led_state(self):
         try:
-            file= open('/home/nvidia/status_led_state.txt', 'r')
+            file= open('/home/miroslaw/status_led_state.txt', 'r')
             self.red = int(file.readline())
             self.green = int(file.readline())
             self.blue = int(file.readline())
@@ -80,7 +80,7 @@ class StatusLEDDriver:
 
     def save_led_state(self):
         try:
-            file= open('/home/nvidia/status_led_state.txt', 'w')
+            file= open('/home/miroslaw/status_led_state.txt', 'w')
             file.write(str(self.red) + "\n")
             file.write(str(self.green) + "\n")
             file.write(str(self.blue) + "\n")
