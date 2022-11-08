@@ -30,7 +30,7 @@
 
 class CanBoards {
     private:
-        const char* canBoardsCanInterface;
+        std::string canBoardsCanInterface;
         std::vector<CanBoard> can_boards;
         std::vector<std::thread> th;
         ros::Subscriber velocityGoalSubscriber, positionGoalSubscriber, effortGoalSubscriber;

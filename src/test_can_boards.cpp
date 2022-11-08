@@ -11,10 +11,12 @@ CanBoards::CanBoards() {
     if (node_handler.hasParam("/test_can_board_driver/can_interface")) {
         node_handler.getParam("/test_can_board_driver/can_interface", tmpCanInterface);
         globalCanInterface = tmpCanInterface.c_str();
+        canBoardsCanInterface = tmpCanInterface;
         ROS_INFO("Using CAN interface: %s", globalCanInterface);
     } else {
         ROS_INFO("No param 'can_interface' stated! Using CAN interface: can0.");
         globalCanInterface = "can0";
+        canBoardsCanInterface = "can0";
     }
     // Loading enable_can_loopback param from launchfile
     if (node_handler.hasParam("/test_can_board_driver/enable_can_loopback")) {
@@ -33,8 +35,6 @@ CanBoards::CanBoards() {
         ROS_INFO("No param 'offsets_file_path' stated! Using encoders offsets file path: /home/nvidia/manipulator_encoders_offsets.txt.");
         globaloffsetsFilePath = "/home/nvidia/manipulator_encoders_offsets.txt";
     }
-    canBoardsCanInterface = globalCanInterface;
-
 
     can_boards.push_back(CanBoard(10));
     can_boards.push_back(CanBoard(11));
@@ -387,7 +387,7 @@ bool CanBoards::setEncoderPositionPidCallback(tools::cb_set_pid::Request  &req, 
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "can0");
+    strcpy(ifr.ifr_name, canBoardsCanInterface.c_str());
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -429,7 +429,7 @@ bool CanBoards::setEncoderVelocityPidCallback(tools::cb_set_pid::Request  &req, 
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "can0");
+    strcpy(ifr.ifr_name, canBoardsCanInterface.c_str());
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -471,7 +471,7 @@ bool CanBoards::setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Requ
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "can0");
+    strcpy(ifr.ifr_name, canBoardsCanInterface.c_str());
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -518,7 +518,7 @@ bool CanBoards::setEncoderEffortLimitsCallback(tools::cb_set_effort_limits::Requ
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "can0");
+    strcpy(ifr.ifr_name, canBoardsCanInterface.c_str());
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -561,7 +561,7 @@ bool CanBoards::setEncoderReadingsFrequencyCallback(tools::cb_set_frequency::Req
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "can0");
+    strcpy(ifr.ifr_name, canBoardsCanInterface.c_str());
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
@@ -603,7 +603,7 @@ void CanBoards::sendCanFrameRequest(int can_board_id, int can_frame_type) {
     struct ifreq ifr;
     struct can_frame frame;
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    strcpy(ifr.ifr_name, "can0");
+    strcpy(ifr.ifr_name, canBoardsCanInterface.c_str());
     ioctl(s, SIOCGIFINDEX, &ifr);
     memset(&addr, 0, sizeof(addr));
     addr.can_family = AF_CAN;
