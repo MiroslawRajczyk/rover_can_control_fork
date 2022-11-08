@@ -124,8 +124,14 @@ void CanBoards::velocityGoalSubscriberCallback(const tools::CbVelocityArray::Con
 void CanBoards::positionGoalSubscriberCallback(const tools::CbPositionArray::ConstPtr& msg) {
     if(msg->position.size() == 6) {
         for (int i = 0; i < msg->position.size();i++) {
-            if ((msg->position[i] <= 180.0) && (msg->position[i] > -180.0)) {
-                can_boards.at(i).setPositionGoal(msg->position[i]);
+            if ((msg->position[i] < 180.0) && (msg->position[i] >= -180.0)) {
+                float tmp_goal = msg->position[i] - can_boards.at(i).getEncoderOffset();
+                if (tmp_goal < -180.0) {
+                    tmp_goal+=360.0;
+                    } else if (tmp_goal >= 180.0) {
+                        tmp_goal-=360.0;
+                    }
+                can_boards.at(i).setPositionGoal(tmp_goal);
                 can_boards.at(i).setFrameType(11);
             } else {
                 ROS_INFO("Received wrong value! Values in position_goal array need to in range from (-180 to 180>. Setting position_goal to position_real for safety...");
