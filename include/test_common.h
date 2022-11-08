@@ -1,2 +1,2 @@
 extern int globalLoopback;
-extern char* globalCanInterface;
+extern const char* globalCanInterface;

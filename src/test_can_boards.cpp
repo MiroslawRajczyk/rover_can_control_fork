@@ -1,6 +1,29 @@
 #include "../include/test_can_boards.hpp"
 
+const char * globalCanInterface;
+int globalLoopback;
+
 CanBoards::CanBoards() {
+    std::string tmpCanInterface;
+    ros::NodeHandle node_handler("can_board_driver");
+    // Loading can_interface param from launchfile
+    if (node_handler.hasParam("/test_can_board_driver/can_interface")) {
+        node_handler.getParam("/test_can_board_driver/can_interface", tmpCanInterface);
+        globalCanInterface = tmpCanInterface.c_str();
+        ROS_INFO("Using CAN interface: %s", globalCanInterface);
+    } else {
+        ROS_INFO("No param 'can_interface' stated! Using CAN interface: can0.");
+        globalCanInterface = "can0";
+    }
+    // Loading enable_can_loopback param from launchfile
+    if (node_handler.hasParam("/test_can_board_driver/enable_can_loopback")) {
+        node_handler.getParam("/test_can_board_driver/enable_can_loopback", globalLoopback);
+        ROS_INFO("Enable CAN loopback: %d", globalLoopback);
+    } else {
+        ROS_INFO("No param 'enable_can_loopback' stated! Using Enable CAN loopback: 0.");
+        globalLoopback = 0;
+    }
+
     can_boards.push_back(CanBoard(10));
     can_boards.push_back(CanBoard(11));
     can_boards.push_back(CanBoard(12));
@@ -14,7 +37,7 @@ CanBoards::CanBoards() {
     for(int i=0; i < can_boards.size(); i++){
         // Add CAN sender thread for can board
         th.push_back(std::thread(&CanBoard::workerCanSender, &can_boards[i]));
-        std::cout <<"Created thread for CanBoard "<<i<<" with function: workerCanSender."<<std::endl;
+        ROS_INFO("Created can sender thread for CanBoard %d", i);
         // Request position PID for can board
         sendCanFrameRequest(can_boards.at(i).getCanId(),0x18);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -32,7 +55,6 @@ CanBoards::CanBoards() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    ros::NodeHandle node_handler("can_board_driver");
     velocityGoalSubscriber = node_handler.subscribe("set_velocity_goal", 1, &CanBoards::velocityGoalSubscriberCallback, this);
     positionGoalSubscriber = node_handler.subscribe("set_position_goal", 1, &CanBoards::positionGoalSubscriberCallback, this);
     effortGoalSubscriber = node_handler.subscribe("set_effort_goal", 1, &CanBoards::effortGoalSubscriberCallback, this);
