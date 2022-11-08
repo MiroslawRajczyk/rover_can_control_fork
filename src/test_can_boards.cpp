@@ -289,7 +289,16 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
     ros::Rate loop_rate(10);
     while (ros::ok()) {
         tools::PoseController poseMsg;
-        poseMsg.position = {can_boards.at(0).getPositionReal() + can_boards.at(0).getEncoderOffset(),can_boards.at(1).getPositionReal() + can_boards.at(1).getEncoderOffset(),can_boards.at(2).getPositionReal() + can_boards.at(2).getEncoderOffset(),can_boards.at(3).getPositionReal() + can_boards.at(3).getEncoderOffset(),can_boards.at(4).getPositionReal() + can_boards.at(4).getEncoderOffset() ,can_boards.at(5).getPositionReal() + can_boards.at(5).getEncoderOffset()};
+        float tmp_position;
+        for(int i = 0; i <can_boards.size(); i++) {
+            if ((can_boards.at(i).getPositionReal() + can_boards.at(0).getEncoderOffset()) < -180.0) {
+                poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset() + 360.0);
+            } else if ((can_boards.at(i).getPositionReal() + can_boards.at(0).getEncoderOffset()) >= 180.0) {
+                poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset() - 360.0);
+            } else {
+                poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset());
+            }
+        }
         positionPub.publish(poseMsg);
 
         tools::CbVelocityArray velMsg;
