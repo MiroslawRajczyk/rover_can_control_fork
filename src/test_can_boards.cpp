@@ -228,6 +228,11 @@ void CanBoards::workerCanReceiver() {
             // read can message with position, velocity and effort values from encoder----
             if (frame.data[0] == 0x13) {
                 can_boards.at(id).setPositionReal((((frame.data[1] << 8) | frame.data[2])*360.0/4096.0)-180.0);
+                if(can_boards.at(id).getPositionReal() < -180.0) {
+                    can_boards.at(id).setPositionReal(can_boards.at(id).getPositionReal() + 360.0);
+                } else if(can_boards.at(id).getPositionReal() >= 180.0) {
+                    can_boards.at(id).setPositionReal(can_boards.at(id).getPositionReal() - 360.0);
+                }
                 can_boards.at(id).setVelocityReal(((frame.data[3] << 8) | frame.data[4])/1000.0);
                 if(can_boards.at(id).getVelocityReal() > 32.767) {
                     can_boards.at(id).setVelocityReal(can_boards.at(id).getVelocityReal() - 65.536);
