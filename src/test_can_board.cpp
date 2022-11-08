@@ -8,6 +8,16 @@ CanBoard::CanBoard(int id)
     velocityReal = 0;
     effortReal = 0;
     positionReal = 0;
+    positionPID.p = 0;
+    positionPID.i = 0;
+    positionPID.d = 0;
+    velocityPID.p = 0;
+    velocityPID.i = 0;
+    velocityPID.d = 0;
+    effortLimits.min = 0;
+    effortLimits.max = 0;
+    positionLimits.from = 0;
+    positionLimits.to = 0;
 }
 
 unsigned int positionToEncoderReadings(double position) {
