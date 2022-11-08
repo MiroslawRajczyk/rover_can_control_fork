@@ -1,10 +1,11 @@
 #include "../include/test_can_boards.hpp"
 
 const char * globalCanInterface;
+const char * globaloffsetsFilePath;
 int globalLoopback;
 
 CanBoards::CanBoards() {
-    std::string tmpCanInterface;
+    std::string tmpCanInterface, tmpOffsetsFilePath;
     ros::NodeHandle node_handler("can_board_driver");
     // Loading can_interface param from launchfile
     if (node_handler.hasParam("/test_can_board_driver/can_interface")) {
@@ -20,9 +21,19 @@ CanBoards::CanBoards() {
         node_handler.getParam("/test_can_board_driver/enable_can_loopback", globalLoopback);
         ROS_INFO("Enable CAN loopback: %d", globalLoopback);
     } else {
-        ROS_INFO("No param 'enable_can_loopback' stated! Using Enable CAN loopback: 0.");
+        ROS_INFO("No param 'enable_can_loopback' stated! Using enable CAN loopback: 0.");
         globalLoopback = 0;
     }
+    // Loading offsets_file_path param from launchfile
+    if (node_handler.hasParam("/test_can_board_driver/offsets_file_path")) {
+        node_handler.getParam("/test_can_board_driver/offsets_file_path", tmpOffsetsFilePath);
+        globaloffsetsFilePath = tmpOffsetsFilePath.c_str();
+        ROS_INFO("Encoders offsets file path: %s", globaloffsetsFilePath);
+    } else {
+        ROS_INFO("No param 'offsets_file_path' stated! Using encoders offsets file path: /home/nvidia/manipulator_encoders_offsets.txt.");
+        globaloffsetsFilePath = "/home/nvidia/manipulator_encoders_offsets.txt";
+    }
+
 
     can_boards.push_back(CanBoard(10));
     can_boards.push_back(CanBoard(11));
@@ -31,7 +42,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(14));
     can_boards.push_back(CanBoard(15));
 
-    this->readEncodersOffsetsFromFile("/home/miroslaw/manipulator_encoders_offsets.txt");
+    this->readEncodersOffsetsFromFile(globaloffsetsFilePath);
     // Add CAN receiver thread
     th.push_back(std::thread(&CanBoards::workerCanReceiver, this));
     for(int i=0; i < can_boards.size(); i++){
@@ -337,7 +348,7 @@ bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &re
     can_boards[req.id].setEncoderOffset(req.new_value);
     if (can_boards[req.id].getEncoderOffset() == req.new_value) {
         std::fstream file;
-        file.open("/home/miroslaw/manipulator_encoders_offsets.txt",std::ios_base::out);
+        file.open(globaloffsetsFilePath,std::ios_base::out);
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
