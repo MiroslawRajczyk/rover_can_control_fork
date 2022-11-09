@@ -21,7 +21,7 @@ CanBoard::CanBoard(int id)
 }
 
 unsigned int positionToEncoderReadings(double position) {
-    if (position > 180.0) {
+    if (position >= 180.0) {
         position = position - 360.0;
     } else if (position < -180.0) {
         position = position + 360.0;

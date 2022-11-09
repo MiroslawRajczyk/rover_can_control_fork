@@ -487,7 +487,7 @@ bool CanBoards::setEncoderPositionLimitsCallback(tools::cb_set_pose_limits::Requ
         setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &globalLoopback, sizeof(globalLoopback));
         if ((req.msg.from >= -180) && (req.msg.from < 180) && (req.msg.to >= -180) && (req.msg.to < 180)) {
             can_frame frame;
-            unsigned int tmp_from = positionToEncoderReadings(req.msg.from - 180.0); // what with offsets
+            unsigned int tmp_from = positionToEncoderReadings(req.msg.from - 180.0 - can_boards.at(req.msg.can_id).getEncoderOffset()); // what with offsets
             unsigned int tmp_to = positionToEncoderReadings(req.msg.to - 180.0);
             frame.can_id = can_boards.at(req.msg.can_id).getCanId();
             frame.can_dlc = 5; // Number of bytes of data to send
