@@ -39,7 +39,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(0x10));
     can_boards.push_back(CanBoard(11));
     can_boards.push_back(CanBoard(12));
-    can_boards.push_back(CanBoard(13));
+    can_boards.push_back(CanBoard(0x13));
     can_boards.push_back(CanBoard(0x14));
     can_boards.push_back(CanBoard(0x15));
 
@@ -187,7 +187,7 @@ void CanBoards::workerCanReceiver() {
 	rfilter[1].can_mask = 0xFFF;
     rfilter[2].can_id   = 0x0C;
 	rfilter[2].can_mask = 0xFFF;
-    rfilter[3].can_id   = 0x0D;
+    rfilter[3].can_id   = 0x13;
 	rfilter[3].can_mask = 0xFFF;
     rfilter[4].can_id   = 0x14;
 	rfilter[4].can_mask = 0xFFF;
@@ -223,7 +223,7 @@ void CanBoards::workerCanReceiver() {
                 case 0x10: id = 0; break;
                 case 0x0B: id = 1; break;
                 case 0x0C: id = 2; break;
-                case 0x0D: id = 3; break;
+                case 0x13: id = 3; break;
                 case 0x14: id = 4; break;
                 case 0x15: id = 5; break;
             }
@@ -370,7 +370,8 @@ bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &re
     can_boards[req.id].setEncoderOffset(req.new_value);
     if (can_boards[req.id].getEncoderOffset() == req.new_value) {
         std::fstream file;
-        file.open(canBoardsCanInterface,std::ios_base::out);
+        //std::string tmp_path = globalCanInterface;
+        file.open("/home/nvidia/manipulator_encoders_offsets.txt",std::ios_base::out);
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
