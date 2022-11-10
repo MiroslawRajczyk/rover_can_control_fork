@@ -190,7 +190,7 @@ void CanBoards::workerCanReceiver() {
 	rfilter[3].can_mask = 0xFFF;
     rfilter[4].can_id   = 0x0E;
 	rfilter[4].can_mask = 0xFFF;
-    rfilter[5].can_id   = 0x0F;
+    rfilter[5].can_id   = 0x15;
 	rfilter[5].can_mask = 0xFFF;
 
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
