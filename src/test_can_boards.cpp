@@ -40,7 +40,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(11));
     can_boards.push_back(CanBoard(12));
     can_boards.push_back(CanBoard(13));
-    can_boards.push_back(CanBoard(14));
+    can_boards.push_back(CanBoard(0x14));
     can_boards.push_back(CanBoard(0x15));
 
     this->readEncodersOffsetsFromFile(globaloffsetsFilePath);
@@ -188,7 +188,7 @@ void CanBoards::workerCanReceiver() {
 	rfilter[2].can_mask = 0xFFF;
     rfilter[3].can_id   = 0x0D;
 	rfilter[3].can_mask = 0xFFF;
-    rfilter[4].can_id   = 0x0E;
+    rfilter[4].can_id   = 0x14;
 	rfilter[4].can_mask = 0xFFF;
     rfilter[5].can_id   = 0x15;
 	rfilter[5].can_mask = 0xFFF;
@@ -223,8 +223,8 @@ void CanBoards::workerCanReceiver() {
                 case 0x0B: id = 1; break;
                 case 0x0C: id = 2; break;
                 case 0x0D: id = 3; break;
-                case 0x0E: id = 4; break;
-                case 0x0F: id = 5; break;
+                case 0x14: id = 4; break;
+                case 0x15: id = 5; break;
             }
             // read can message with position, velocity and effort values from encoder----
             if (frame.data[0] == 0x13) {
@@ -292,7 +292,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
         tools::PoseController poseMsg;
         float tmp_position;
         for(int i = 0; i <can_boards.size(); i++) {
-            if ((can_boards.at(i).getPositionReal() + can_boards.at(0).getEncoderOffset()) < -180.0) {
+            if ((can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset()) < -180.0) {
                 poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset() + 360.0);
             } else if ((can_boards.at(i).getPositionReal() + can_boards.at(0).getEncoderOffset()) >= 180.0) {
                 poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset() - 360.0);
