@@ -36,7 +36,7 @@ CanBoards::CanBoards() {
         globaloffsetsFilePath = "/home/nvidia/manipulator_encoders_offsets.txt";
     }
 
-    can_boards.push_back(CanBoard(10));
+    can_boards.push_back(CanBoard(0x10));
     can_boards.push_back(CanBoard(11));
     can_boards.push_back(CanBoard(12));
     can_boards.push_back(CanBoard(13));
@@ -180,7 +180,7 @@ void CanBoards::workerCanReceiver() {
     struct can_frame frame;
     struct can_filter rfilter[6];
 
-	rfilter[0].can_id   = 0x0A;
+	rfilter[0].can_id   = 0x10;
 	rfilter[0].can_mask = 0xFFF;
     rfilter[1].can_id   = 0x0B;
 	rfilter[1].can_mask = 0xFFF;
@@ -219,7 +219,7 @@ void CanBoards::workerCanReceiver() {
                 perror("Read");
             }
             switch(frame.can_id) {
-                case 0x0A: id = 0; break;
+                case 0x10: id = 0; break;
                 case 0x0B: id = 1; break;
                 case 0x0C: id = 2; break;
                 case 0x0D: id = 3; break;
