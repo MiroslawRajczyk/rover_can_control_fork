@@ -41,7 +41,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(12));
     can_boards.push_back(CanBoard(13));
     can_boards.push_back(CanBoard(14));
-    can_boards.push_back(CanBoard(15));
+    can_boards.push_back(CanBoard(0x15));
 
     this->readEncodersOffsetsFromFile(globaloffsetsFilePath);
     // Add CAN receiver thread
