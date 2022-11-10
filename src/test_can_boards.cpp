@@ -170,6 +170,7 @@ void CanBoards::readEncodersOffsetsFromFile(std::string path) {
         can_boards[i].setEncoderOffset(std::stof(line));
         i++;
     }
+    fin.close();
 }
 
 void CanBoards::workerCanReceiver() {
@@ -369,7 +370,7 @@ bool CanBoards::setEncoderOffsetCallback(tools::encoder_set_offset::Request  &re
     can_boards[req.id].setEncoderOffset(req.new_value);
     if (can_boards[req.id].getEncoderOffset() == req.new_value) {
         std::fstream file;
-        file.open(globaloffsetsFilePath,std::ios_base::out);
+        file.open(canBoardsCanInterface,std::ios_base::out);
         for(int i=0;i<can_boards.size();i++)
         {
             file << can_boards[i].getEncoderOffset() << std::endl;
