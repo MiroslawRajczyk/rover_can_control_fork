@@ -42,6 +42,7 @@ CanBoards::CanBoards() {
     can_boards.push_back(CanBoard(0x13));
     can_boards.push_back(CanBoard(0x14));
     can_boards.push_back(CanBoard(0x15));
+    can_boards.push_back(CanBoard(0x16));
 
     this->readEncodersOffsetsFromFile(globaloffsetsFilePath);
     // Add CAN receiver thread
@@ -146,7 +147,7 @@ void CanBoards::positionGoalSubscriberCallback(const tools::CbPositionArray::Con
 }
 
 void CanBoards::effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPtr& msg) {
-    if(msg->effort.size() == 6) {
+    if(msg->effort.size() == 7) {
         for (int i =0; i< msg->effort.size();i++) {
             if ((msg->effort[i] <= 100) && (msg->effort[i] >= -100)) {
                 can_boards.at(i).setEffortGoal(msg->effort[i]);
@@ -157,7 +158,7 @@ void CanBoards::effortGoalSubscriberCallback(const tools::CbEffortArray::ConstPt
             }
         }
     } else {
-        ROS_INFO("Setting effort of Can Boards require 6 values to be sent, received: %d", msg->effort.size());
+        ROS_INFO("Setting effort of Can Boards require 7 values to be sent, received: %d", msg->effort.size());
     }
 
 }
@@ -193,6 +194,8 @@ void CanBoards::workerCanReceiver() {
 	rfilter[4].can_mask = 0xFFF;
     rfilter[5].can_id   = 0x15;
 	rfilter[5].can_mask = 0xFFF;
+    rfilter[5].can_id   = 0x16;
+	rfilter[5].can_mask = 0xFFF;
 
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     strcpy(ifr.ifr_name, globalCanInterface);
@@ -226,6 +229,7 @@ void CanBoards::workerCanReceiver() {
                 case 0x13: id = 3; break;
                 case 0x14: id = 4; break;
                 case 0x15: id = 5; break;
+                case 0x16: id = 6; break;
             }
             // read can message with position, velocity and effort values from encoder----
             if (frame.data[0] == 0x13) {
@@ -292,7 +296,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
     while (ros::ok()) {
         tools::PoseController poseMsg;
         float tmp_position;
-        for(int i = 0; i <can_boards.size(); i++) {
+        for(int i = 0; i <can_boards.size() - 1; i++) { // size -1 as we don't have encoder on gripper - no need to publish rubbish position of it
             if ((can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset()) < -180.0) {
                 poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset() + 360.0);
             } else if ((can_boards.at(i).getPositionReal() + can_boards.at(0).getEncoderOffset()) >= 180.0) {
@@ -308,12 +312,12 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
         velocityPub.publish(velMsg);
 
         tools::CbEffortArray effMsg;
-        effMsg.effort = {can_boards.at(0).getEffortReal(),can_boards.at(1).getEffortReal(),can_boards.at(2).getEffortReal(),can_boards.at(3).getEffortReal(),can_boards.at(4).getEffortReal(),can_boards.at(5).getEffortReal()};
+        effMsg.effort = {can_boards.at(0).getEffortReal(),can_boards.at(1).getEffortReal(),can_boards.at(2).getEffortReal(),can_boards.at(3).getEffortReal(),can_boards.at(4).getEffortReal(),can_boards.at(5).getEffortReal(),can_boards.at(6).getEffortReal()};
         effortPub.publish(effMsg);
 
         tools::CbPidArray positionPidMsgArray;
         tools::CbPid tmpPositionPidMsg;
-        for (int j = 0; j < can_boards.size(); j++) {
+        for (int j = 0; j < can_boards.size() -1; j++) { // size -1 as we don't have encoder on gripper - it won't have position readings and control
             tmpPositionPidMsg.can_id = can_boards.at(j).getCanId();
             tmpPositionPidMsg.p = can_boards.at(j).getPositionPID().p;
             tmpPositionPidMsg.i = can_boards.at(j).getPositionPID().i;
@@ -324,7 +328,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
 
         tools::CbPidArray velocityPidMsgArray;
         tools::CbPid tmpVelocityPidMsg;
-        for (int j = 0; j < can_boards.size(); j++) {
+        for (int j = 0; j < can_boards.size() -1; j++) { // size -1 as we don't have encoder on gripper - it won't have velocity readings or control
             tmpVelocityPidMsg.can_id = can_boards.at(j).getCanId();
             tmpVelocityPidMsg.p = can_boards.at(j).getVelocityPID().p;
             tmpVelocityPidMsg.i = can_boards.at(j).getVelocityPID().i;
@@ -335,7 +339,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
 
         tools::CbPositionLimitsArray posLimMsgArr;
         tools::CbPoseLimits tmpPosLimMsg;
-        for (int i = 0; i < can_boards.size(); i++) {
+        for (int i = 0; i < can_boards.size() -1; i++) { // size -1 as we don't have encoder on gripper - it won't have limits values configured
             tmpPosLimMsg.can_id = can_boards.at(i).getCanId();
             tmpPosLimMsg.from = can_boards.at(i).getPositionLimits().from;
             tmpPosLimMsg.to = can_boards.at(i).getPositionLimits().to;
@@ -345,7 +349,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
 
         tools::CbEffortLimitsArray effLimMsgArr;
         tools::CbEffortLimits tmpEffLimMsg;
-        for (int i = 0; i < can_boards.size(); i++) {
+        for (int i = 0; i < can_boards.size() -1; i++) { // size -1 as we don't have encoder on gripper - it won't have limits values configured
             tmpEffLimMsg.can_id = can_boards.at(i).getCanId();
             tmpEffLimMsg.min = can_boards.at(i).getEffortLimits().min;
             tmpEffLimMsg.max = can_boards.at(i).getEffortLimits().max;
