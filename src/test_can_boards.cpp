@@ -194,8 +194,8 @@ void CanBoards::workerCanReceiver() {
 	rfilter[4].can_mask = 0xFFF;
     rfilter[5].can_id   = 0x15;
 	rfilter[5].can_mask = 0xFFF;
-    rfilter[5].can_id   = 0x16;
-	rfilter[5].can_mask = 0xFFF;
+    rfilter[6].can_id   = 0x16;
+	rfilter[6].can_mask = 0xFFF;
 
     s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     strcpy(ifr.ifr_name, globalCanInterface);
@@ -296,7 +296,7 @@ void CanBoards::workerRosPublisher(ros::Publisher positionPub, ros::Publisher ve
     while (ros::ok()) {
         tools::PoseController poseMsg;
         float tmp_position;
-        for(int i = 0; i <can_boards.size() - 1; i++) { // size -1 as we don't have encoder on gripper - no need to publish rubbish position of it
+        for(int i = 0; i <can_boards.size() -1; i++) { // size -1 as we don't have encoder on gripper - it won't have position readings
             if ((can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset()) < -180.0) {
                 poseMsg.position.push_back(can_boards.at(i).getPositionReal() + can_boards.at(i).getEncoderOffset() + 360.0);
             } else if ((can_boards.at(i).getPositionReal() + can_boards.at(0).getEncoderOffset()) >= 180.0) {
