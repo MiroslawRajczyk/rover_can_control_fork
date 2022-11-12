@@ -38,7 +38,7 @@ CanBoards::CanBoards() {
 
     can_boards.push_back(CanBoard(0x10));
     can_boards.push_back(CanBoard(0x11));
-    can_boards.push_back(CanBoard(12));
+    can_boards.push_back(CanBoard(0x12));
     can_boards.push_back(CanBoard(0x13));
     can_boards.push_back(CanBoard(0x14));
     can_boards.push_back(CanBoard(0x15));
@@ -186,7 +186,7 @@ void CanBoards::workerCanReceiver() {
 	rfilter[0].can_mask = 0xFFF;
     rfilter[1].can_id   = 0x11;
 	rfilter[1].can_mask = 0xFFF;
-    rfilter[2].can_id   = 0x0C;
+    rfilter[2].can_id   = 0x12;
 	rfilter[2].can_mask = 0xFFF;
     rfilter[3].can_id   = 0x13;
 	rfilter[3].can_mask = 0xFFF;
@@ -225,7 +225,7 @@ void CanBoards::workerCanReceiver() {
             switch(frame.can_id) {
                 case 0x10: id = 0; break;
                 case 0x11: id = 1; break;
-                case 0x0C: id = 2; break;
+                case 0x12: id = 2; break;
                 case 0x13: id = 3; break;
                 case 0x14: id = 4; break;
                 case 0x15: id = 5; break;
