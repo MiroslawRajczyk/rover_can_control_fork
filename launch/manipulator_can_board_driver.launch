@@ -1,0 +1,7 @@
+<launch>
+    <node name="manipulator_can_board_driver" pkg="rover_can_control_fork" type="manipulator_can_board_driver" output="screen">
+        <param name="can_interface" value="can0" />
+        <param name="enable_can_loopback" value="0" />
+        <param name="offsets_file_path" value="/home/nvidia/manipulator_encoders_offsets.txt" />
+    </node>
+</launch>

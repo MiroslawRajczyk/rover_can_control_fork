@@ -13,7 +13,7 @@
 #include <thread>
 #include <iostream>
 #include <chrono>
-#include "../include/test_common.h"
+#include "../include/manipulator_common.h"
 
 unsigned int positionToEncoderReadings(double position);
 

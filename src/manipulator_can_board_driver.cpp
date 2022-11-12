@@ -1,9 +1,8 @@
 #include <ros/ros.h>
 #include <signal.h>
 
-#include "../include/test_can_boards.hpp"
-#include "../include/test_manipulator_interface.hpp"
-#include "../include/test_common.h"
+#include "../include/manipulator_can_boards.hpp"
+#include "../include/manipulator_common.h"
 
 bool enableThreads = true;
 void sigIntHandler(int s){
@@ -11,11 +10,10 @@ void sigIntHandler(int s){
 }
 
 int main(int argc, char **argv) {
-    ros::init(argc, argv, "test_can_board_driver");
+    ros::init(argc, argv, "manipulator_can_board_driver");
     CanBoards boards;
 
     signal (SIGINT,sigIntHandler);
-    //ManipulatorInterface manipulator_interface(node_handle, can_boards);
     while(true) {
         ros::spinOnce();
         if (!enableThreads) {

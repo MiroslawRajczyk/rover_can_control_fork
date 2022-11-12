@@ -24,8 +24,8 @@
 #include <string.h>
 #include <fstream>
 
-#include "test_can_board.hpp"
-#include "../include/test_common.h"
+#include "manipulator_can_board.hpp"
+#include "../include/manipulator_common.h"
 
 
 class CanBoards {

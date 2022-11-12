@@ -1,4 +1,4 @@
-#include "../include/test_can_board.hpp"
+#include "../include/manipulator_can_board.hpp"
 
 CanBoard::CanBoard(int id)
 {

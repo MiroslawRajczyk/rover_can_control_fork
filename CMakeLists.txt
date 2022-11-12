@@ -16,8 +16,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(test_can_board_driver src/test_can_board_driver.cpp src/test_can_board.cpp src/test_can_boards.cpp)
-target_link_libraries(test_can_board_driver ${catkin_LIBRARIES})
+add_executable(manipulator_can_board_driver src/manipulator_can_board_driver.cpp src/manipulator_can_board.cpp src/manipulator_can_boards.cpp)
+target_link_libraries(manipulator_can_board_driver ${catkin_LIBRARIES})
 
 install(DIRECTORY config/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
